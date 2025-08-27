@@ -1,0 +1,244 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResQMap</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{% static 'frontend/style.css' %}">
+  <script src="{% static 'frontend/script.js' %}" defer></script>
+  <style>
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.05); opacity: 1; }
+    }
+    .pulse { animation: pulse 2s infinite; }
+  </style>
+</head>
+<body class="bg-black">
+  
+  <!-- Navbar -->
+  <nav class="fixed top-0 px-6 py-6 w-full flex justify-between items-center z-50 backdrop-blur-md">
+    <!-- Left -->
+    <div class="flex items-center gap-3">
+      <img src="{% static 'images/logo.png' %}" alt="Logo" class="h-10 w-auto">
+      <span class="text-white font-bold text-xl">ResQMap</span>
+    </div>
+
+    <!-- Right buttons -->
+    <div class="flex items-center gap-3">
+      <button class="px-5 py-2 bg-red-600 rounded-2xl text-white pulse hover:scale-105 transition">
+        REPORT
+      </button>
+      <button class="px-5 py-2 bg-gray-700/50 text-white rounded-2xl hover:bg-gray-600/70 transition">
+        Login
+      </button>
+      <button class="px-5 py-2 bg-gray-700/50 text-white rounded-2xl hover:bg-gray-600/70 transition">
+        Home
+      </button>
+      <button class="px-5 py-2 bg-gray-700/50 text-white rounded-2xl hover:bg-gray-600/70 transition">
+        About
+      </button>
+      <button class="px-5 py-2 bg-gray-700/50 text-white rounded-2xl hover:bg-gray-600/70 transition">
+        Donate
+      </button>
+    </div>
+  </nav>
+    <div class="relative h-screen w-full overflow-hidden bg-black"> 
+
+        <!-- Floating particles --> 
+        <div class="absolute inset-0" id="particles"></div>
+        <!-- Hero Section -->
+        <div class="relative h-[80vh] w-full flex flex-col gap-[4rem] items-center justify-center text-center text-white px-6">
+            <div class="div">
+                <h1 class="text-5xl font-bold mb-4">ResQMap</h1>
+                <h3 class="max-w-2xl text-lg opacity-90">
+                A 3D India-centric globe for real-time disaster prediction, risk visualization, 
+                and community reporting
+                </h3>
+            </div>
+            <!-- From Uiverse.io by fanishah --> 
+            <div class="planet "></div>
+        </div>
+        
+    </div>
+        <!-- About Section -->
+    <section class="relative z-150 py-20 bg-black text-white backdrop-blur-md">
+        <div class="max-w-5xl mx-auto px-6 text-center">
+            <h2 class="text-3xl font-bold mb-8">About ResQMap</h2>
+            <p class="text-lg opacity-90 leading-relaxed">
+                <span class="font-semibold text-red-400">ResQMap</span> is an 
+                <span class="font-semibold">India-centric disaster management platform</span> 
+                designed to predict, visualize, and respond to disasters in real time.  
+                It combines <span class="font-semibold">AI-powered risk prediction</span>,  
+                <span class="font-semibold">community-driven reporting</span>, and  
+                <span class="font-semibold">rescuer coordination</span> into one unified system.
+            </p>
+
+            <div class="mt-12 grid md:grid-cols-2 gap-8 text-left">
+                <!-- Left Column -->
+                <div class="bg-gray-800/50 p-6 rounded-2xl border border-gray-700 shadow-lg">
+                    <h3 class="text-xl font-bold text-red-500 mb-3"> The Problem</h3>
+                    <p class="text-sm opacity-80">
+                        Natural disasters like floods, earthquakes, and cyclones 
+                        affect millions each year. Current systems are often slow, 
+                        disconnected, and lack real-time community participation.  
+                        ResQMap addresses these challenges by integrating <span class="font-semibold">live data</span> 
+                        and <span class="font-semibold">collaborative reporting</span>.
+                    </p>
+                </div>
+
+                <!-- Right Column -->
+                <div class="bg-gray-800/50 p-6 rounded-2xl border border-gray-700 shadow-lg">
+                    <h3 class="text-xl text-green-500 font-bold mb-3">The Solution</h3>
+                    <p class="text-sm opacity-80">
+                        Using <span class="font-semibold">satellite feeds, weather APIs, 
+                        and AI models</span>, ResQMap predicts disaster-prone zones.  
+                        A 3D interactive globe visualizes affected areas with 
+                        heatmaps and live reports. Citizens can raise alerts instantly, 
+                        while rescuers use the system to get <span class="font-semibold">shortest paths, 
+                        live updates, and on-site team counts</span>.
+                    </p>
+                </div>
+            </div>
+
+            <div class="mt-12">
+                <h3 class="text-xl font-bold text-yellow-400 mb-3">Our Vision</h3>
+                <p class="text-sm opacity-80 max-w-3xl mx-auto">
+                    ResQMap envisions a future where <span class="font-semibold">technology and 
+                    community</span> come together to save lives. By empowering both 
+                    citizens and responders, we aim to create a <span class="font-semibold">faster, smarter, 
+                    and more resilient disaster management ecosystem</span>.
+                </p>
+            </div>
+        </div>
+    </section>
+
+
+  <!-- Cards Section -->
+  <section class="relative py-20 bg-black text-white">
+    <div class="max-w-6xl mx-auto px-6 grid sm:grid-cols-2 md:grid-cols-3 gap-8">
+      
+      <!-- Card 1 -->
+      <div class="bg-gray-800/60 rounded-2xl p-6 shadow-lg border border-gray-700 
+                  hover:scale-105 hover:shadow-xl transition transform duration-300">
+        <h2 class="text-xl font-bold mb-2 text-center">Disaster Prediction</h2>
+        <p class="text-sm opacity-80 text-center">
+          AI-powered models forecast disaster risks in real time, giving communities critical time to prepare.
+        </p>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="bg-gray-800/60 rounded-2xl p-6 shadow-lg border border-gray-700 hover:scale-105 hover:shadow-xl transition transform duration-300">
+    
+        <h2 class="text-xl font-bold mb-2 text-center">Risk Visualization</h2>
+        <p class="text-sm opacity-80 text-center">
+          A 3D interactive globe highlights affected areas with detailed heatmaps and satellite insights.
+        </p>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="bg-gray-800/60 rounded-2xl p-6 shadow-lg border border-gray-700 
+                  hover:scale-105 hover:shadow-xl transition transform duration-300">
+       
+        <h2 class="text-xl font-bold mb-2 text-center">Community Reporting</h2>
+        <p class="text-sm opacity-80 text-center">
+          Citizens can report disasters in their locality instantly, creating a collaborative safety network.
+        </p>
+      </div>
+
+    </div>
+  </section>
+      <!-- How It Works Section -->
+    <section class="relative z-150 py-20 text-white">
+        <div class="max-w-6xl mx-auto px-6 text-center">
+            <h2 class="text-3xl font-bold mb-12">How ResQMap Works</h2>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                
+                <!-- APIs + Prediction -->
+                <div class="bg-gray-800/60 rounded-2xl p-6 shadow-lg border border-gray-700 hover:scale-105 transition">
+                    <div class="text-red-500 text-4xl mb-4">📡</div>
+                    <h3 class="text-xl font-bold mb-2">AI-Powered APIs</h3>
+                    <p class="text-sm opacity-80">
+                        ResQMap integrates real-time weather, seismic, and satellite APIs.  
+                        These data streams feed into ML models that <span class="font-semibold">predict potential disasters</span> 
+                        before they happen.
+                    </p>
+                </div>
+
+                <!-- Crowd Reports -->
+                <div class="bg-gray-800/60 rounded-2xl p-6 shadow-lg border border-gray-700 hover:scale-105 transition">
+                    <div class="text-green-500 text-4xl mb-4">📝</div>
+                    <h3 class="text-xl font-bold mb-2">Crowd Reporting</h3>
+                    <p class="text-sm opacity-80">
+                        Citizens can <span class="font-semibold">report incidents instantly</span>.  
+                        These reports appear live on the 3D globe with markers,  
+                        creating a real-time disaster map powered by the community.
+                    </p>
+                </div>
+
+                <!-- Rescuer Login -->
+                <div class="bg-gray-800/60 rounded-2xl p-6 shadow-lg border border-gray-700 hover:scale-105 transition">
+                    <div class="text-blue-500 text-4xl mb-4">🦸</div>
+                    <h3 class="text-xl font-bold mb-2">Rescuer Dashboard</h3>
+                    <p class="text-sm opacity-80">
+                        Verified rescuers log in to access a powerful dashboard.  
+                        It shows the <span class="font-semibold">nearest disaster hotspot</span>,  
+                        calculates the <span class="font-semibold">shortest safe path</span> to reach there,  
+                        and displays how many <span class="text-yellow-400 font-semibold">rescuers are already on site</span>.
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+      <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-300 py-8 mt-12">
+        <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-3 gap-8">
+
+            <!-- About Section -->
+            <div>
+                <h2 class="text-xl font-bold text-white mb-3">ResQMap</h2>
+                <p class="text-sm opacity-80">
+                    A disaster management platform for real-time prediction, visualization, 
+                    and community-driven reporting.
+                </p>
+            </div>
+
+            <!-- Quick Links -->
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-3">Quick Links</h2>
+                <ul class="space-y-2">
+                    <li><a href="#" class="hover:text-red-500 transition">Home</a></li>
+                    <li><a href="#" class="hover:text-red-500 transition">About</a></li>
+                    <li><a href="#" class="hover:text-red-500 transition">Report</a></li>
+                    <li><a href="#" class="hover:text-red-500 transition">Donate</a></li>
+                </ul>
+            </div>
+
+            <!-- Contact -->
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-3">Contact Us</h2>
+                <p class="text-sm">📍 Mumbai, India</p>
+                <p class="text-sm">✉️ support@resqmap.org</p>
+                <div class="flex gap-4 mt-3">
+                    <a href="#" class="hover:text-red-500 transition">Instagram</a>
+                    <a href="#" class="hover:text-red-500 transition">Facebook</a>
+                    <a href="#" class="hover:text-red-500 transition">Twitter</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div class="border-t border-gray-700 mt-8 pt-4 text-center text-sm opacity-70">
+            © 2025 ResQMap. All rights reserved.
+        </div>
+    </footer>
+
+
+</body>
+</html>
+
