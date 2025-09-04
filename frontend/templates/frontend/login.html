@@ -1,0 +1,48 @@
+<!-- login.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="min-h-screen flex items-center justify-center bg-black">
+
+  <div class="w-full max-w-md p-8 bg-white backdrop-blur-md rounded-2xl shadow-xl">
+    <h2 class="text-2xl font-bold text-center text-black mb-6">Welcome Back</h2>
+
+    <form method="POST" class="space-y-4">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <!-- Username -->
+        <div>
+            {{ form.username.errors }}
+            <label class="block text-sm font-medium text-black">{{ form.username.label }}</label>
+            {{ form.username }}
+        </div>
+
+        <!-- Password -->
+        <div>
+            {{ form.password.errors }}
+            <label class="block text-sm font-medium text-black">{{ form.password.label }}</label>
+            {{ form.password }}
+        </div>
+
+        <button type="submit"
+            class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition">
+            Login
+        </button>
+        </form>
+
+
+    <p class="text-sm text-gray-400 mt-4 text-center">
+      Don’t have an account?
+      <a href="{% url 'signup' %}" class="text-blue-400 hover:underline">Sign up here</a>
+    </p>
+  </div>
+
+</body>
+</html>

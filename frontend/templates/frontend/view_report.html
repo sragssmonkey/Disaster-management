@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>India Disaster Crowd Reports</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      background: #0b1220;
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
+      color: #f1f5f9;
+    }
+    #map {
+      width: 100%;
+      height: 60vh; /* mobile default height */
+    }
+    @media (min-width: 768px) {
+      #map { height: calc(100vh - 56px); } /* desktop full height */
+    }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="fixed top-0 left-0 right-0 z-50 backdrop-blur bg-slate-900/80 border-b border-slate-700 h-14 flex items-center px-4">
+    <h1 class="font-semibold">India Disaster Crowd Reports</h1>
+    <a href="{% url 'report'%}" class="ml-auto px-3 py-1.5 rounded-md bg-emerald-500 text-emerald-950 font-semibold hover:bg-emerald-400 text-sm">+ New Report</a>
+  </header>
+
+  <!-- MAIN -->
+  <main class="pt-14 h-screen flex flex-col md:flex-row">
+    <!-- MAP -->
+    <div class="flex-1">
+      <div id="map"></div>
+    </div>
+
+    <!-- FEED -->
+    <aside id="feedPanel"
+      class="bg-slate-900/95 border-t border-slate-700 md:border-t-0 md:border-l
+             w-full md:w-80 md:max-w-sm
+             h-[40vh] md:h-[calc(100vh-56px)]
+             flex flex-col overflow-hidden">
+
+      <!-- HEADER -->
+      <div class="p-3 border-b border-slate-700 flex items-center justify-between">
+        <span class="font-medium flex items-center gap-2">
+          Live Feed <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        </span>
+        <span id="count" class="text-xs opacity-70">0</span>
+      </div>
+
+      <!-- CONTENT -->
+      <div id="feedContent" class="p-3 space-y-2 text-sm overflow-y-auto flex-1"></div>
+    </aside>
+  </main>
+
+  <script>
+    const LS_KEY = "idcr_reports";
+    const CATEGORY_COLORS = {
+      flood: "#3b82f6",
+      earthquake: "#ef4444",
+      cyclone: "#06b6d4",
+      tsunami: "#0ea5e9",
+      drought: "#f59e0b",
+      other: "#64748b"
+    };
+
+    // MAP
+    const map = L.map("map").setView([22.5937, 78.9629], 5);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+
+    // Load reports
+    async function loadReports() {
+      const response = await fetch("/api/reports/");
+      const reports = await response.json();
+
+      const feed = document.getElementById("feedContent");
+      feed.innerHTML = "";
+      document.getElementById("count").textContent = reports.length;
+
+      reports.forEach(r => {
+        const color = CATEGORY_COLORS[r.category] || CATEGORY_COLORS.other;
+
+        if (r.lat && r.lng) {
+          L.circleMarker([r.lat, r.lng], {
+            radius: 6,
+            fillColor: color,
+            color: "#000",
+            weight: 1,
+            fillOpacity: 0.9
+          }).addTo(map).bindPopup(`
+            <b>${r.category}</b><br>
+            ${r.note || "No note"}<br>
+            Sev: ${r.severity} <br>
+            ${new Date(r.created_at).toLocaleString()}
+          `);
+        }
+
+        const div = document.createElement("div");
+        div.className = "p-2 rounded-lg border border-slate-700 bg-slate-800/60";
+        div.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full" style="background:${color}"></span>
+            <span class="font-medium capitalize">${r.category}</span>
+            <span class="ml-auto text-xs opacity-70">${new Date(r.created_at).toLocaleTimeString()}</span>
+          </div>
+          <div class="mt-1 text-xs">${r.note || ""}</div>
+        `;
+        feed.appendChild(div);
+      });
+
+      setTimeout(() => map.invalidateSize(), 200);
+    }
+
+    loadReports();
+    setInterval(loadReports, 10000);
+
+  </script>
+</body>
+</html>

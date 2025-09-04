@@ -40,9 +40,11 @@ INSTALLED_APPS = [
     'frontend',
     'backend',
     'mlmodel',
+    "corsheaders",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -123,3 +125,14 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'home'
+CORS_ALLOW_ALL_ORIGINS = True  # (good for hackathon dev, tighten later)
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+INDIA_BOUNDS = {
+    "MIN_LAT": 6.0, "MAX_LAT": 37.5,
+    "MIN_LNG": 68.0, "MAX_LNG": 97.5,
+}

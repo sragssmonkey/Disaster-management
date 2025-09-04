@@ -28,18 +28,21 @@
 
     <!-- Right buttons -->
     <div class="flex items-center gap-3">
-      <button class="px-5 py-2 bg-red-600 rounded-2xl text-white pulse hover:scale-105 transition">
-        REPORT
-      </button>
-      <button class="px-5 py-2 bg-gray-700/50 text-white rounded-2xl hover:bg-gray-600/70 transition">
-        Login
-      </button>
+      <a href="{% url 'report' %}" class="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+        Report Disaster
+      </a>
+
+      {% if user.is_authenticated %}
+          <a href="{% url 'logout' %}" class="px-5 py-2 bg-gray-700/50 text-white rounded-2xl hover:bg-gray-600/70 transition">Logout</a>
+      {% else %}
+          <a href="{% url 'login' %}" class="px-5 py-2 bg-gray-700/50 text-white rounded-2xl hover:bg-gray-600/70 transition" >Login</a>
+      {% endif %}
       <button class="px-5 py-2 bg-gray-700/50 text-white rounded-2xl hover:bg-gray-600/70 transition">
         Home
       </button>
-      <button class="px-5 py-2 bg-gray-700/50 text-white rounded-2xl hover:bg-gray-600/70 transition">
+      <a href="#about" class="px-5 py-2 bg-gray-700/50 text-white rounded-2xl hover:bg-gray-600/70 transition">
         About
-      </button>
+      </a>
       <button class="px-5 py-2 bg-gray-700/50 text-white rounded-2xl hover:bg-gray-600/70 transition">
         Donate
       </button>
@@ -60,11 +63,17 @@
             </div>
             <!-- From Uiverse.io by fanishah --> 
             <div class="planet "></div>
+            <a href="{% url 'globe' %}">
+              <button class="px-5 py-2 bg-gray-700/50 text-white rounded-2xl hover:bg-gray-600/70 transition">
+                GO TO GLOBE
+              </button>
+            </a>
+
         </div>
         
     </div>
         <!-- About Section -->
-    <section class="relative z-150 py-20 bg-black text-white backdrop-blur-md">
+    <section id="about" class="relative z-150 py-20 bg-black text-white backdrop-blur-md">
         <div class="max-w-5xl mx-auto px-6 text-center">
             <h2 class="text-3xl font-bold mb-8">About ResQMap</h2>
             <p class="text-lg opacity-90 leading-relaxed">
