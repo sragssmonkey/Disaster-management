@@ -120,12 +120,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+AUTH_USER_MODEL = "backend.CustomUser"
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-LOGIN_REDIRECT_URL = 'home'
+LOGIN_REDIRECT_URL = '/view_report/'
+
 LOGOUT_REDIRECT_URL = 'home'
 CORS_ALLOW_ALL_ORIGINS = True  # (good for hackathon dev, tighten later)
 

@@ -1,6 +1,8 @@
 from django import forms
-from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import get_user_model
+
+CustomUser = get_user_model()
 
 class SignUpForm(UserCreationForm):
     email = forms.EmailField(required=True)
@@ -11,13 +13,13 @@ class SignUpForm(UserCreationForm):
     )
 
     class Meta:
-        model = User
-        fields = ['username', 'email', 'password1', 'password2']  # keep only User fields
+        model = CustomUser   # ✅ use your custom user model
+        fields = ['username', 'email', 'password1', 'password2', 'number']  
 
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data['email']
-        # number is not part of User → you can store it in a Profile model or handle it separately
+        user.number = self.cleaned_data['number']  # ✅ only if CustomUser has `number` field
         if commit:
             user.save()
         return user

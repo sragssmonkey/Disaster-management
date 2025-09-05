@@ -1,21 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cesium.com/downloads/cesiumjs/releases/1.132/Build/Cesium/Cesium.js"></script>
-  <link href="https://cesium.com/downloads/cesiumjs/releases/1.132/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
-  <script src="https://unpkg.com/heatmap.js@2.0.5/build/heatmap.min.js"></script>
-
-
-  <title>Globe</title>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+  <title>Disaster Management Globe — Bhuvan 3D</title>
+  <style>
+    #cesiumContainer { width: 100%; height: 100%; }
+  </style>
 </head>
 <body class="bg-gray-900 text-white font-sans">
   
   <!-- Navbar -->
   <nav class="w-full flex justify-between items-center px-6 py-4 bg-black shadow-md sticky top-0 z-10">
-    <h1 class="text-2xl font-bold">🌍 Disaster Management Globe</h1>
+    <h1 class="text-2xl font-bold">🌍 Disaster Management — Bhuvan 3D Globe</h1>
     <a href="{% url 'home' %}">
       <button class="px-5 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl hover:opacity-90 transition shadow-lg">
         Go To Home
@@ -23,38 +23,34 @@
     </a>
   </nav>
 
-  <!-- Main Layout -->
-  <div class="flex">
-    
-    <!-- Globe Container -->
-    <div id="cesiumContainer" class="w-[75%] h-screen rounded-r-2xl shadow-lg border border-gray-700"></div>
-    
-    <!-- Sidebar -->
-    <div id="api-layers" class="w-[25%] h-screen bg-black p-6 flex flex-col rounded-l-2xl shadow-lg border-l border-gray-700">
-      <h2 class="text-3xl font-bold mb-6 border-b border-gray-600 pb-2">Layers</h2>
+  <div class="flex h-[calc(100vh-64px)]">
+    <!-- Cesium Globe -->
+    <div class="w-[75%] h-full rounded-r-2xl overflow-hidden shadow-lg border border-gray-700">
+      <div id="cesiumContainer"></div>
+    </div>
 
-      <!-- Layer Toggles -->
+    <!-- Sidebar -->
+    <div class="w-[25%] h-full bg-black p-6 flex flex-col rounded-l-2xl shadow-lg border-l border-gray-700">
+      <h2 class="text-3xl font-bold mb-6 border-b border-gray-600 pb-2">Layers / Actions</h2>
+
+      <!-- Layer Controls -->
       <div class="space-y-4 flex-1">
         <label class="flex items-center gap-3">
           <input type="checkbox" id="bhuvanLayer" class="w-5 h-5 accent-blue-500">
           <span>Bhuvan Satellite Layer</span>
         </label>
-
         <label class="flex items-center gap-3">
           <input type="checkbox" id="weatherLayer" class="w-5 h-5 accent-green-500">
           <span>Weather Overlay</span>
         </label>
-
         <label class="flex items-center gap-3">
           <input type="checkbox" id="disasterReports" class="w-5 h-5 accent-yellow-500">
           <span>Disaster Reports</span>
         </label>
-
         <label class="flex items-center gap-3">
           <input type="checkbox" id="rescueHotspots" class="w-5 h-5 accent-red-500">
           <span>Rescue Hotspots</span>
         </label>
-
         <label class="flex items-center gap-3">
           <input type="checkbox" id="heatmapToggle" class="w-5 h-5 accent-purple-500">
           <span>ML Heatmap</span>
@@ -63,7 +59,7 @@
 
       <!-- Earthquake Map Button -->
       <div class="mt-6 border-t border-gray-700 pt-4">
-        <a href="{% url 'earthquake_map' %}">
+        <a href="{% url 'disaster_map' %}">
           <button class="w-full px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition shadow-md">
             🌐 View Earthquake Map
           </button>
@@ -74,9 +70,9 @@
 
   <!-- Cesium Script -->
   <script type="module">
-    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0NGJjY2U0ZC0zMThmLTQwYmYtOWZmNS05ZDczMmM5OGMzNDciLCJpZCI6MzM2NTM5LCJpYXQiOjE3NTY0Njc4MTJ9.0fikg7ZsmBpEWcpu1gAb62kGQALk_9GZJxXsPFpzAQ8';
+    Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0NGJjY2U0ZC0zMThmLTQwYmYtOWZmNS05ZDczMmM5OGMzNDciLCJpZCI6MzM2NTM5LCJpYXQiOjE3NTY0Njc4MTJ9.0fikg7ZsmBpEWcpu1gAb62kGQALk_9GZJxXsPFpzAQ8";
 
-    const viewer = new Cesium.Viewer('cesiumContainer', {
+    const viewer = new Cesium.Viewer("cesiumContainer", {
       terrain: Cesium.Terrain.fromWorldTerrain(),
       animation: false,
       timeline: false,
@@ -86,134 +82,86 @@
       baseLayerPicker: true,
     });
 
-    // Add 3D buildings
-    const buildingTileset = await Cesium.createOsmBuildingsAsync();
-    viewer.scene.primitives.add(buildingTileset);
-
-    // Example ML model predictions
-    const predictions = [
-      { lat: 28.6139, lon: 77.2090, risk: 0.9, city: "Delhi" },
-      { lat: 19.0760, lon: 72.8777, risk: 0.7, city: "Mumbai" },
-      { lat: 13.0827, lon: 80.2707, risk: 0.4, city: "Chennai" },
-      { lat: 22.5726, lon: 88.3639, risk: 0.6, city: "Kolkata" }
-    ];
-
-    // Fly to India
+    // Initial camera
     viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(78.9629, 22.5937, 2500000)
+      destination: Cesium.Cartesian3.fromDegrees(78.9629, 22.5937, 2500000),
     });
 
-    // Plot predictions as points
-    predictions.forEach(pred => {
-      viewer.entities.add({
-        name: pred.city,
-        position: Cesium.Cartesian3.fromDegrees(pred.lon, pred.lat),
-        point: {
-          pixelSize: 12,
-          color: pred.risk > 0.7 
-            ? Cesium.Color.RED 
-            : pred.risk > 0.5 
-              ? Cesium.Color.ORANGE 
-              : Cesium.Color.YELLOW,
-          outlineColor: Cesium.Color.BLACK,
-          outlineWidth: 2
-        },
-        label: {
-          text: `${pred.city} (Risk: ${pred.risk})`,
-          font: "14px sans-serif",
-          fillColor: Cesium.Color.WHITE,
-          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-          outlineWidth: 2,
-          verticalOrigin: Cesium.VerticalOrigin.TOP,
-          pixelOffset: new Cesium.Cartesian2(0, -20)
-        }
-      });
+    // ====== Bhuvan Layers with TOKEN ======
+    const BHUVAN_TOKEN = "422c3bc4e365a753a8db8f0c259d43bfe9d9f7c6";
+
+    // Satellite / India3 WMS
+    const bhuvanProvider = new Cesium.WebMapServiceImageryProvider({
+      url: "https://bhuvan-iserver.nrsc.gov.in/bhuvan/wms",
+      layers: "india3",
+      parameters: {
+        service: "WMS",
+        version: "1.1.1",
+        request: "GetMap",
+        format: "image/png",
+        transparent: "true",
+        token: BHUVAN_TOKEN,
+      },
     });
-    // ========= ML Heatmap (add/remove ImageryLayer) =========
+    const bhuvanLayer = viewer.imageryLayers.addImageryProvider(bhuvanProvider);
+    bhuvanLayer.show = false;
 
-      // India rectangle (adjust if needed)
-      const RECT_WEST  = 68.0;
-      const RECT_EAST  = 97.0;
-      const RECT_SOUTH = 6.0;
-      const RECT_NORTH = 37.0;
+    document.getElementById("bhuvanLayer").addEventListener("change", (e) => {
+      bhuvanLayer.show = e.target.checked;
+    });
 
-      let mlHeatmapLayer = null;
+    // Flood Hazard Layer
+    const floodProvider = new Cesium.WebMapServiceImageryProvider({
+      url: "https://bhuvan-ras2.nrsc.gov.in/cgi-bin/hazard.exe",
+      layers: "hazard",
+      parameters: {
+        service: "WMS",
+        version: "1.1.1",
+        request: "GetMap",
+        format: "image/png",
+        transparent: "true",
+        token: BHUVAN_TOKEN,
+      },
+    });
+    const floodLayer = viewer.imageryLayers.addImageryProvider(floodProvider);
+    floodLayer.show = false;
 
-      // Build a heatmap image (offscreen) using heatmap.js and add as ImageryLayer
-      function addMlHeatmapLayer(preds) {
-        // 1) Offscreen container for heatmap.js
-        const W = 1024, H = 1024;
-        const container = document.createElement("div");
-        container.style.width = W + "px";
-        container.style.height = H + "px";
-        container.style.position = "absolute";
-        container.style.left = "-99999px"; // keep offscreen
-        document.body.appendChild(container);
+    document.getElementById("disasterReports").addEventListener("change", (e) => {
+      floodLayer.show = e.target.checked;
+    });
 
-        const Heatmap = window.h337 || h337;
-        const heat = Heatmap.create({
-          container,
-          radius: 40,
-          maxOpacity: 0.75,
-          minOpacity: 0.0,
-          blur: 0.85
+    // Weather Layer (placeholder, confirm exact WMS layer name)
+    const weatherProvider = new Cesium.WebMapServiceImageryProvider({
+      url: "https://bhuvan-app1.nrsc.gov.in/2dresources/bhuvanstore2.php",
+      layers: "cloud_cover_insat3ds", // replace with correct name from GetCapabilities
+      parameters: {
+        service: "WMS",
+        version: "1.1.1",
+        request: "GetMap",
+        format: "image/png",
+        transparent: "true",
+        token: BHUVAN_TOKEN,
+      },
+    });
+    const weatherLayer = viewer.imageryLayers.addImageryProvider(weatherProvider);
+    weatherLayer.show = false;
+
+    document.getElementById("weatherLayer").addEventListener("change", (e) => {
+      weatherLayer.show = e.target.checked;
+    });
+
+    // Rescue Hotspots
+    document.getElementById("rescueHotspots").addEventListener("change", (e) => {
+      if (e.target.checked) {
+        viewer.entities.add({
+          name: "Rescue Hotspot",
+          position: Cesium.Cartesian3.fromDegrees(77.5946, 12.9716),
+          point: { pixelSize: 14, color: Cesium.Color.CYAN },
         });
-
-        // 2) Convert lon/lat -> pixel coords inside our rectangle
-        const lonSpan = RECT_EAST - RECT_WEST;
-        const latSpan = RECT_NORTH - RECT_SOUTH;
-
-        const points = preds.map(p => ({
-          // x increases to the east
-          x: Math.round((p.lon - RECT_WEST) * (W / lonSpan)),
-          // y increases downward; lat decreases southward, so invert
-          y: Math.round((RECT_NORTH - p.lat) * (H / latSpan)),
-          value: Math.round(p.risk * 100)   // 0–100
-        }));
-
-        heat.setData({ max: 100, data: points });
-
-        // 3) Turn the resulting canvas into a dataURL
-        const url = heat._renderer.canvas.toDataURL("image/png");
-
-        // 4) Clean up the offscreen element
-        document.body.removeChild(container);
-
-        // 5) Add as a Cesium ImageryLayer
-        const layer = viewer.imageryLayers.addImageryProvider(
-          new Cesium.SingleTileImageryProvider({
-            url,
-            rectangle: Cesium.Rectangle.fromDegrees(
-              RECT_WEST, RECT_SOUTH, RECT_EAST, RECT_NORTH
-            )
-          })
-        );
-
-        return layer;
+      } else {
+        viewer.entities.removeAll();
       }
-
-      // Toggle handler
-      const heatmapCheckbox = document.getElementById("heatmapToggle");
-      heatmapCheckbox.addEventListener("change", (e) => {
-        if (e.target.checked) {
-          // (re)create the layer each time to ensure fresh image from predictions
-          if (mlHeatmapLayer) {
-            viewer.imageryLayers.remove(mlHeatmapLayer, true);
-            mlHeatmapLayer = null;
-          }
-          mlHeatmapLayer = addMlHeatmapLayer(predictions);
-        } else {
-          if (mlHeatmapLayer) {
-            viewer.imageryLayers.remove(mlHeatmapLayer, true);
-            mlHeatmapLayer = null;
-          }
-        }
-      });
-
-
-
+    });
   </script>
-
 </body>
 </html>
-

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Disaster Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+    <style>
+        body { font-family: Arial, sans-serif; margin:0; padding:0; }
+        h2 { text-align:center; margin:1rem 0; }
+        #map { width: 100%; height: 80vh; margin-top:1rem; }
+        form { text-align:center; margin:1rem; }
+        input { padding:0.3rem; margin:0 0.5rem; }
+        button { padding:0.3rem 0.6rem; }
+    </style>
+</head>
+<body>
+    <h2>Earthquakes & Cyclones in India</h2>
+
+    <!-- Filter Form -->
+    <form method="get">
+        <label>Magnitude:
+            <input type="number" step="0.1" name="min_mag" value="{{ min_mag }}">
+            -
+            <input type="number" step="0.1" name="max_mag" value="{{ max_mag }}">
+        </label>
+        <label>Year:
+            <input type="number" name="min_year" value="{{ min_year }}">
+            -
+            <input type="number" name="max_year" value="{{ max_year }}">
+        </label>
+        <button type="submit">Filter</button>
+    </form>
+
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+    <script>
+        // Initialize map
+        var map = L.map('map').setView([20.5937, 78.9629], 5);
+
+        // Add base layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18
+        }).addTo(map);
+
+        // Parse data from Django
+        var earthquakeData = JSON.parse('{{ earthquake_data|safe }}');
+        var cycloneData = JSON.parse('{{ cyclone_data|safe }}');
+
+        // Earthquake MarkerCluster
+        var eqCluster = L.markerClusterGroup();
+        earthquakeData.forEach(function(eq) {
+            var marker = L.circleMarker([eq.latitude, eq.longitude], {
+                radius: 5,
+                color: "red",
+                fillOpacity: 0.6
+            }).bindPopup(
+                "<b>Magnitude:</b> " + eq.magnitude +
+                "<br><b>Location:</b> " + eq.place +
+                "<br><b>Date:</b> " + eq.time
+            );
+            eqCluster.addLayer(marker);
+        });
+        map.addLayer(eqCluster);
+
+        // Cyclone MarkerCluster
+        var cyCluster = L.markerClusterGroup();
+        cycloneData.forEach(function(cy) {
+            var marker = L.marker([cy.LAT, cy.LON], {
+                icon: L.icon({
+                    iconUrl: 'https://cdn-icons-png.flaticon.com/512/869/869869.png',
+                    iconSize: [25, 25]
+                })
+            }).bindPopup(
+                "<b>Cyclone:</b> " + cy.NAME +
+                "<br><b>Year:</b> " + cy.YEAR +
+                "<br><b>Wind:</b> " + cy.WMO_WIND + " km/h"
+            );
+            cyCluster.addLayer(marker);
+        });
+        map.addLayer(cyCluster);
+
+        // Layer control
+        var overlayMaps = {
+            "Earthquakes": eqCluster,
+            "Cyclones": cyCluster
+        };
+        L.control.layers(null, overlayMaps).addTo(map);
+    </script>
+</body>
+</html>

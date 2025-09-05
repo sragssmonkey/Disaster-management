@@ -2,6 +2,9 @@ from django.shortcuts import render, redirect
 from .forms import SignUpForm
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.forms import AuthenticationForm
+from backend.models import CrowdReport as Report
+import json
+
 
 
 def logout_view(request):
@@ -15,7 +18,7 @@ def signup(request):
         if form.is_valid():
             user = form.save()
             login(request, user)  # Django's login()
-            return redirect('home')
+            return redirect('login')
     else:
         form = SignUpForm()
     return render(request, 'frontend/signup.html', {'form': form})
@@ -23,14 +26,14 @@ def signup(request):
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('home')
+        return redirect('view_report')
 
     if request.method == "POST":
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            return redirect("home")
+            return redirect("view_report")
     else:
         form = AuthenticationForm()
     return render(request, "frontend/login.html", {"form": form})
@@ -46,11 +49,35 @@ def globe(request):
 def report(request):
     return render(request,"frontend/report.html")
 
-def view_report(request):
-    return render(request,"frontend/view_report.html")
+from django.shortcuts import render
+
 
 import json
-from django.shortcuts import render
+
+import json
+
+def view_report(request):
+    reports = Report.objects.all().order_by("-created_at")
+    reports_data = []
+
+    for r in reports:
+        reports_data.append({
+            "id": r.id,
+            "category": r.category,
+            "severity": r.severity,
+            "note": r.note,
+            "lat": r.lat,
+            "lng": r.lng,
+            "created_at": r.created_at.strftime("%Y-%m-%d %H:%M:%S"),  # ✅ fix
+        })
+
+    context = {
+        "reports_json": json.dumps(reports_data),
+        "is_rescuer": request.user.is_authenticated and hasattr(request.user, "is_rescuer") and request.user.is_rescuer(),
+    }
+    return render(request, "frontend/view_report.html", context)
+
+
 
 from django.shortcuts import render
 import json
