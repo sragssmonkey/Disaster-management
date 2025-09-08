@@ -1,82 +1,232 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <title>Disaster Historical Map</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
 
-  <!-- Leaflet CSS (no integrity attributes) -->
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 
   <!-- MarkerCluster CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 
-  <!-- Optional icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <!-- Font Awesome (optional) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
 
   <style>
-    :root{
-      --panel-bg: rgba(12,14,22,0.92);
+    :root {
+      --panel-bg: rgba(12, 14, 22, 0.92);
       --panel-fg: #fff;
       --muted: #cbd5e1;
       --accent: #2563eb;
       --card-radius: 10px;
       font-family: Inter, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
-    html,body{height:100%;margin:0}
-    body{background:#0b1220;color:var(--panel-fg);display:flex;flex-direction:column}
-    header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 1px 0 rgba(255,255,255,0.02)}
-    header h1{font-size:16px;margin:0;color:var(--panel-fg)}
-    main{flex:1;display:flex;min-height:0}
-    .panel{
-      width:320px;
-      max-width:40%;
-      background:var(--panel-bg);
-      padding:14px;
-      box-shadow: 0 6px 18px rgba(2,6,23,0.6);
+
+    html,
+    body {
+      height: 100%;
+      margin: 0
+    }
+
+    body {
+      background: #0b1220;
+      color: var(--panel-fg);
+      display: flex;
+      flex-direction: column
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02);
+      z-index: 1100;
+    }
+
+    header h1 {
+      font-size: 16px;
+      margin: 0;
+      color: var(--panel-fg)
+    }
+
+    /* mobile toggle visible only small */
+    .panel-toggle {
+      display: none;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--panel-fg);
+      padding: 6px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      min-height: 0
+    }
+
+    .panel {
+      width: 320px;
+      max-width: 40%;
+      background: var(--panel-bg);
+      padding: 14px;
+      box-shadow: 0 6px 18px rgba(2, 6, 23, 0.6);
       border-radius: var(--card-radius);
       margin: 18px;
       z-index: 1000;
-      overflow:auto;
+      overflow: auto;
+      transition: transform 260ms ease, opacity 260ms ease;
     }
-    .panel h2{margin:0 0 10px 0;font-size:18px}
-    .control-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-    label.inline{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted)}
-    .small{font-size:13px;color:var(--muted)}
-    .btn{background:var(--accent);border:none;color:white;padding:8px 10px;border-radius:8px;cursor:pointer}
-    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--panel-fg);padding:7px 9px;border-radius:8px;cursor:pointer}
-    .row{display:flex;gap:8px;align-items:center}
-    input[type="range"]{width:100%}
-    input[type="number"]{width:88px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--panel-fg)}
-    #map { flex:1; min-height:0; height: calc(100vh - 74px); border-left: 1px solid rgba(255,255,255,0.02);}
-    @media(max-width:900px){
-      .panel{position:absolute;left:8px;top:62px;width:90%;max-width:unset;margin:0}
-      #map{height:calc(100vh - 62px)}
+
+    .panel h2 {
+      margin: 0 0 10px 0;
+      font-size: 18px
     }
-    .popup-title{font-weight:700;margin-bottom:4px}
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px
+    }
+
+    label.inline {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--muted)
+    }
+
+    .small {
+      font-size: 13px;
+      color: var(--muted)
+    }
+
+    .btn {
+      background: var(--accent);
+      border: none;
+      color: white;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--panel-fg);
+      padding: 7px 9px;
+      border-radius: 8px;
+      cursor: pointer
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center
+    }
+
+    input[type="number"] {
+      width: 88px;
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--panel-fg)
+    }
+
+    #map {
+      flex: 1;
+      min-height: 0;
+      height: calc(100vh - 74px);
+      border-left: 1px solid rgba(255, 255, 255, 0.02)
+    }
+
+    .popup-title {
+      font-weight: 700;
+      margin-bottom: 4px
+    }
+
+    /* --- Mobile behavior --- */
+    @media (max-width: 900px) {
+      .panel {
+        position: absolute;
+        left: 12px;
+        top: 62px;
+        width: calc(100% - 24px);
+        max-width: none;
+        margin: 0;
+        transform: translateY(-20px) scale(0.98);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .panel.visible {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .panel-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      /* ensure map sits under the header */
+      #map {
+        height: calc(100vh - 62px);
+      }
+    }
+
+    /* accessibility focus outline for toggle */
+    .panel-toggle:focus {
+      outline: 2px solid rgba(37, 99, 235, 0.6);
+      outline-offset: 2px;
+    }
   </style>
 </head>
+
 <body>
   <header>
     <h1>Disaster Historical Map — India</h1>
-    <nav style="display:flex;gap:8px;align-items:center">
-      <a href="/globe/" class="btn-ghost" title="Back to Globe"><i class="fa fa-globe"></i>&nbsp;&nbsp;Globe</a>
-      <button id="downloadCsv" class="btn" title="Download filtered data as CSV"><i class="fa fa-download"></i>&nbsp;&nbsp;Export CSV</button>
-    </nav>
+
+    <div style="display:flex;gap:8px;align-items:center">
+      <!-- Mobile toggle: visible on small screens -->
+      <button id="panelToggleBtn" class="panel-toggle" aria-expanded="false" aria-controls="filtersPanel"
+        title="Show filters">
+        <i class="fa fa-bars" aria-hidden="true"></i>
+        <span class="sr-only">Toggle filters</span>
+      </button>
+
+      <a href="/globe/" class="btn-ghost" title="Back to Globe"
+        style="text-decoration:none;padding:6px 8px;border-radius:8px">
+        <i class="fa fa-globe"></i>&nbsp;&nbsp;Globe
+      </a>
+      <button id="downloadCsv" class="btn" title="Download filtered data as CSV"><i
+          class="fa fa-download"></i>&nbsp;&nbsp;Export CSV</button>
+    </div>
   </header>
 
   <main>
-    <aside class="panel" aria-label="Map controls">
+    <aside id="filtersPanel" class="panel visible" aria-label="Map controls">
       <h2>Filters & Layers</h2>
 
       <div style="margin-bottom:8px">
         <div class="control-row">
           <label class="inline"><input type="checkbox" id="earthquakeToggle" checked> Earthquakes</label>
-          <label class="inline" style="margin-left:auto"><input type="checkbox" id="cycloneToggle" checked> Cyclones</label>
-        </div>
-        <div class="control-row">
-          <label class="inline"><input type="checkbox" id="clusterToggle" checked> Marker clustering</label>
+          <label class="inline" style="margin-left:auto"><input type="checkbox" id="cycloneToggle" checked>
+            Cyclones</label>
         </div>
       </div>
 
@@ -97,7 +247,6 @@
       </section>
 
       <section style="margin-top:12px">
-        <div class="small">Quick actions</div>
         <div style="margin-top:8px;display:flex;gap:8px">
           <button id="applyFilters" class="btn">Apply</button>
           <button id="resetFilters" class="btn-ghost">Reset</button>
@@ -107,7 +256,8 @@
       <section style="margin-top:14px">
         <div class="small">Search & location</div>
         <div style="margin-top:8px;display:flex;gap:8px">
-          <input id="searchBox" placeholder="Search place or coords" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--panel-fg)" />
+          <input id="searchBox" placeholder="Search place or coords"
+            style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--panel-fg)" />
           <button id="searchBtn" class="btn-ghost">Go</button>
         </div>
         <div style="margin-top:8px">
@@ -119,11 +269,11 @@
         <div class="small">Legend</div>
         <ul style="margin:8px 0;padding-left:16px;color:var(--muted)">
           <li><strong style="color:#ff4d4f">Red circles</strong> — Earthquakes (size ∝ magnitude)</li>
-          <li><strong style="color:#ff8c00">Orange icon</strong> — Cyclone centers</li>
+          <li><strong style="color:#ff8c00">Icon</strong> — Cyclone centers</li>
         </ul>
       </section>
 
-      <div style="margin-top:14px" class="muted">Tip: click a marker to open details. Use clustering toggle for dense views.</div>
+      <div style="margin-top:14px" class="muted">Tip: click a marker to open details. Clustering is always on.</div>
     </aside>
 
     <section id="map" role="application" aria-label="Disaster map"></section>
@@ -133,252 +283,304 @@
   <script id="earthquake-data" type="application/json">{{ earthquake_data|safe }}</script>
   <script id="cyclone-data" type="application/json">{{ cyclone_data|safe }}</script>
 
-  <!-- Leaflet JS + MarkerCluster (no integrity attributes) -->
+  <!-- Leaflet + MarkerCluster -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
   <script>
-  document.addEventListener('DOMContentLoaded', function(){
-    try {
-      // parse server data
-      const earthquakeData = JSON.parse(document.getElementById('earthquake-data').textContent || '[]');
-      const cycloneData = JSON.parse(document.getElementById('cyclone-data').textContent || '[]');
+    (function () {
+      // Mobile toggle logic
+      const panel = document.getElementById('filtersPanel');
+      const toggleBtn = document.getElementById('panelToggleBtn');
 
-      // create map and base imagery (Esri World Imagery)
-      const map = L.map('map', { preferCanvas: true }).setView([22.0, 80.0], 5);
-      window.map = map;
-
-      const base = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19,
-        attribution: 'Tiles © Esri'
-      });
-      base.addTo(map);
-
-      // Add simple test marker (will confirm map loaded)
-      const testMarker = L.marker([20.5937,78.9629]).addTo(map).bindPopup('India center (test)');
-
-      // clusters and marker storage
-      let eqCluster = L.markerClusterGroup({ chunkedLoading: true });
-      let cyCluster = L.markerClusterGroup({ chunkedLoading: true });
-      const eqMarkers = [];
-      const cyMarkers = [];
-
-      function prettyDate(t) {
-        try { const d = new Date(t); return isNaN(d)?String(t):d.toLocaleString(); } catch(e){ return String(t); }
-      }
-
-      // build earthquake markers
-      earthquakeData.forEach(eq => {
-        const lat = Number(eq.latitude || eq.lat || (eq.latlng && eq.latlng[0]));
-        const lon = Number(eq.longitude || eq.lon || (eq.latlng && eq.latlng[1]) || eq.lng);
-        if (!isFinite(lat) || !isFinite(lon)) return;
-        const mag = Number(eq.magnitude || eq.mag || 0);
-        const place = eq.place || eq.location || '';
-        const time = eq.time || eq.date || '';
-
-        const radius = Math.max(4, (mag || 1) * 3);
-        const circle = L.circleMarker([lat, lon], {
-          radius,
-          color: '#ff4d4f',
-          fillColor: '#ff7a7a',
-          fillOpacity: 0.7,
-          weight: 1
-        });
-
-        const html = `<div class="popup"><div class="popup-title">Magnitude ${mag}</div>
-          <div><strong>Location:</strong> ${place}</div><div><strong>Date:</strong> ${prettyDate(time)}</div></div>`;
-
-        circle.bindPopup(html);
-        eqMarkers.push({ marker: circle, mag, year: ((new Date(time)).getFullYear() || null), raw: eq });
-        eqCluster.addLayer(circle);
-      });
-
-      // build cyclone markers
-      cycloneData.forEach(cy => {
-        const lat = Number(cy.LAT || cy.lat || cy.latitude);
-        const lon = Number(cy.LON || cy.lon || cy.longitude);
-        if (!isFinite(lat) || !isFinite(lon)) return;
-        const name = cy.NAME || cy.name || 'Cyclone';
-        const year = Number(cy.YEAR || cy.year || (new Date(cy.DATE || cy.date)).getFullYear()) || null;
-        const wind = cy.WMO_WIND || cy.wind || '';
-
-        const icon = L.icon({
-          iconUrl: cy.iconUrl || 'https://cdn-icons-png.flaticon.com/512/869/869869.png',
-          iconSize: [28,28],
-          iconAnchor: [14,14]
-        });
-
-        const marker = L.marker([lat, lon], { icon });
-        const html = `<div class="popup"><div class="popup-title">${name}</div>
-          <div><strong>Year:</strong> ${year}</div><div><strong>Wind:</strong> ${wind}</div></div>`;
-        marker.bindPopup(html);
-
-        cyMarkers.push({ marker, year, raw: cy });
-        cyCluster.addLayer(marker);
-      });
-
-      // add clusters
-      map.addLayer(eqCluster);
-      map.addLayer(cyCluster);
-
-      // UI elements
-      const minMagInput = document.getElementById('minMag');
-      const maxMagInput = document.getElementById('maxMag');
-      const minYearInput = document.getElementById('minYear');
-      const maxYearInput = document.getElementById('maxYear');
-      const earthquakeToggle = document.getElementById('earthquakeToggle');
-      const cycloneToggle = document.getElementById('cycloneToggle');
-      const clusterToggle = document.getElementById('clusterToggle');
-      const applyBtn = document.getElementById('applyFilters');
-      const resetBtn = document.getElementById('resetFilters');
-      const searchBox = document.getElementById('searchBox');
-      const searchBtn = document.getElementById('searchBtn');
-      const locateBtn = document.getElementById('locateBtn');
-      const downloadBtn = document.getElementById('downloadCsv');
-
-      // apply filters
-      function applyFilters() {
-        const minMag = parseFloat(minMagInput.value) || -Infinity;
-        const maxMag = parseFloat(maxMagInput.value) || Infinity;
-        const minYear = parseInt(minYearInput.value) || -Infinity;
-        const maxYear = parseInt(maxYearInput.value) || Infinity;
-
-        // clear clusters
-        eqCluster.clearLayers();
-        cyCluster.clearLayers();
-
-        if (earthquakeToggle.checked) {
-          eqMarkers.forEach(obj => {
-            const magOK = (obj.mag >= minMag && obj.mag <= maxMag);
-            const yearOK = (obj.year === null) ? true : (obj.year >= minYear && obj.year <= maxYear);
-            if (magOK && yearOK) eqCluster.addLayer(obj.marker);
-          });
-        }
-
-        if (cycloneToggle.checked) {
-          cyMarkers.forEach(obj => {
-            const yearOK = (obj.year === null) ? true : (obj.year >= minYear && obj.year <= maxYear);
-            if (yearOK) cyCluster.addLayer(obj.marker);
-          });
-        }
-
-        // clustering toggle
-        if (!clusterToggle.checked) {
-          // remove clusters and add singles
-          if (map.hasLayer(eqCluster)) map.removeLayer(eqCluster);
-          if (map.hasLayer(cyCluster)) map.removeLayer(cyCluster);
-          eqMarkers.forEach(obj => {
-            const magOK = (obj.mag >= minMag && obj.mag <= maxMag);
-            const yearOK = (obj.year === null) ? true : (obj.year >= minYear && obj.year <= maxYear);
-            if (magOK && yearOK) map.addLayer(obj.marker); else map.removeLayer(obj.marker);
-          });
-          cyMarkers.forEach(obj => {
-            const yearOK = (obj.year === null) ? true : (obj.year >= minYear && obj.year <= maxYear);
-            if (yearOK) map.addLayer(obj.marker); else map.removeLayer(obj.marker);
-          });
+      function setPanelVisible(visible) {
+        if (visible) {
+          panel.classList.add('visible');
+          toggleBtn.setAttribute('aria-expanded', 'true');
+          toggleBtn.title = 'Hide filters';
         } else {
-          // ensure clusters are on map
-          eqMarkers.forEach(obj=>map.removeLayer(obj.marker));
-          cyMarkers.forEach(obj=>map.removeLayer(obj.marker));
-          if (!map.hasLayer(eqCluster)) map.addLayer(eqCluster);
-          if (!map.hasLayer(cyCluster)) map.addLayer(cyCluster);
+          panel.classList.remove('visible');
+          toggleBtn.setAttribute('aria-expanded', 'false');
+          toggleBtn.title = 'Show filters';
         }
       }
 
-      // fit to data
-      function fitToData() {
-        const latlngs = [];
+      // Only wire toggle behavior for small screens; but always let user toggle
+      toggleBtn.addEventListener('click', () => {
+        const isVisible = panel.classList.contains('visible');
+        setPanelVisible(!isVisible);
+      });
+
+      // If user rotates or resizes to large screen, ensure panel is visible
+      window.addEventListener('resize', () => {
+        if (window.innerWidth > 900) {
+          panel.classList.add('visible');
+          toggleBtn.style.display = 'none';
+        } else {
+          toggleBtn.style.display = '';
+          // keep previous state (don't forcibly hide)
+        }
+      });
+
+      // initial display for toggle (hide toggle on wide screens)
+      if (window.innerWidth <= 900) toggleBtn.style.display = '';
+      else toggleBtn.style.display = 'none';
+    })();
+  </script>
+
+  <script>
+    // Map code (keeps clustering always on). I left behavior same as your working file.
+    document.addEventListener('DOMContentLoaded', function () {
+      try {
+        const earthquakeData = JSON.parse(document.getElementById('earthquake-data').textContent || '[]');
+        const cycloneData = JSON.parse(document.getElementById('cyclone-data').textContent || '[]');
+
+        const map = L.map('map', { preferCanvas: true }).setView([22.0, 80.0], 5);
+        window.map = map;
+
+        const base = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          maxZoom: 19,
+          attribution: 'Tiles © Esri'
+        });
+        base.addTo(map);
+
+        let eqCluster = L.markerClusterGroup({ chunkedLoading: true });
+        let cyCluster = L.markerClusterGroup({ chunkedLoading: true });
+        const eqMarkers = [];
+        const cyMarkers = [];
+
+        function prettyDate(t) {
+          try { const d = new Date(t); return isNaN(d) ? String(t) : d.toLocaleString(); } catch (e) { return String(t); }
+        }
+
+        // build earthquake markers
         earthquakeData.forEach(eq => {
           const lat = Number(eq.latitude || eq.lat || (eq.latlng && eq.latlng[0]));
           const lon = Number(eq.longitude || eq.lon || (eq.latlng && eq.latlng[1]) || eq.lng);
-          if (isFinite(lat) && isFinite(lon)) latlngs.push([lat, lon]);
+          if (!isFinite(lat) || !isFinite(lon)) return;
+          const mag = Number(eq.magnitude || eq.mag || 0);
+          const place = eq.place || eq.location || '';
+          const time = eq.time || eq.date || '';
+
+          const radius = Math.max(4, (mag || 1) * 3);
+          const circle = L.circleMarker([lat, lon], {
+            radius,
+            color: '#ff4d4f',
+            fillColor: '#ff7a7a',
+            fillOpacity: 0.7,
+            weight: 1
+          });
+
+          const html = `<div class="popup"><div class="popup-title">Magnitude ${mag}</div>
+            <div><strong>Location:</strong> ${place}</div><div><strong>Date:</strong> ${prettyDate(time)}</div></div>`;
+
+          circle.bindPopup(html);
+          eqMarkers.push({ marker: circle, mag, year: ((new Date(time)).getFullYear() || null), raw: eq });
+          eqCluster.addLayer(circle);
         });
+
+        // build cyclone markers (using Flaticon CDN icon)
         cycloneData.forEach(cy => {
-          const lat = Number(cy.LAT || cy.lat || cy.latitude), lon = Number(cy.LON || cy.lon || cy.longitude);
-          if (isFinite(lat) && isFinite(lon)) latlngs.push([lat, lon]);
-        });
-        if (latlngs.length) map.fitBounds(latlngs, { padding: [40,40] });
-      }
+          const lat = Number(cy.LAT || cy.lat || cy.latitude);
+          const lon = Number(cy.LON || cy.lon || cy.longitude);
+          if (!isFinite(lat) || !isFinite(lon)) return;
+          const name = cy.NAME || cy.name || 'Cyclone';
+          const year = Number(cy.YEAR || cy.year || (new Date(cy.DATE || cy.date)).getFullYear()) || null;
+          const wind = cy.WMO_WIND || cy.wind || '';
 
-      // wire UI
-      applyBtn.addEventListener('click', applyFilters);
-      resetBtn.addEventListener('click', () => {
-        minMagInput.value = '{{ min_mag|default:0 }}';
-        maxMagInput.value = '{{ max_mag|default:10 }}';
-        minYearInput.value = '{{ min_year|default:1900 }}';
-        maxYearInput.value = '{{ max_year|default:2100 }}';
-        earthquakeToggle.checked = true; cycloneToggle.checked = true; clusterToggle.checked = true;
-        eqCluster.clearLayers(); cyCluster.clearLayers();
-        eqMarkers.forEach(obj=>eqCluster.addLayer(obj.marker));
-        cyMarkers.forEach(obj=>cyCluster.addLayer(obj.marker));
-        if (!map.hasLayer(eqCluster)) map.addLayer(eqCluster);
-        if (!map.hasLayer(cyCluster)) map.addLayer(cyCluster);
+          const icon = L.icon({
+            iconUrl: cy.iconUrl || 'https://cdn-icons-png.flaticon.com/512/4005/4005940.png',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+          });
+
+          const marker = L.marker([lat, lon], { icon });
+          const html = `<div class="popup"><div class="popup-title">${name}</div>
+            <div><strong>Year:</strong> ${year}</div><div><strong>Wind:</strong> ${wind}</div></div>`;
+          marker.bindPopup(html);
+
+          cyMarkers.push({ marker, year, raw: cy });
+          cyCluster.addLayer(marker);
+        });
+
+        map.addLayer(eqCluster);
+        map.addLayer(cyCluster);
+
+        // UI elements
+        const minMagInput = document.getElementById('minMag');
+        const maxMagInput = document.getElementById('maxMag');
+        const minYearInput = document.getElementById('minYear');
+        const maxYearInput = document.getElementById('maxYear');
+        const earthquakeToggle = document.getElementById('earthquakeToggle');
+        const cycloneToggle = document.getElementById('cycloneToggle');
+        const applyBtn = document.getElementById('applyFilters');
+        const resetBtn = document.getElementById('resetFilters');
+        const searchBox = document.getElementById('searchBox');
+        const searchBtn = document.getElementById('searchBtn');
+        const locateBtn = document.getElementById('locateBtn');
+        const downloadBtn = document.getElementById('downloadCsv');
+
+        function applyFilters() {
+          const minMag = parseFloat(minMagInput.value) || -Infinity;
+          const maxMag = parseFloat(maxMagInput.value) || Infinity;
+          const minYear = parseInt(minYearInput.value) || -Infinity;
+          const maxYear = parseInt(maxYearInput.value) || Infinity;
+
+          eqCluster.clearLayers();
+          cyCluster.clearLayers();
+
+          earthquakeData.forEach(eq => {
+            const lat = Number(eq.latitude || eq.lat || (eq.latlng && eq.latlng[0]));
+            const lon = Number(eq.longitude || eq.lon || (eq.latlng && eq.latlng[1]) || eq.lng);
+            if (!isFinite(lat) || !isFinite(lon)) return;
+            const mag = Number(eq.magnitude || eq.mag || 0);
+            const time = eq.time || eq.date || '';
+            const year = (new Date(time)).getFullYear() || null;
+            const magOK = (mag >= minMag && mag <= maxMag);
+            const yearOK = (year === null) ? true : (year >= minYear && year <= maxYear);
+            if (magOK && yearOK) {
+              const radius = Math.max(4, (mag || 1) * 3);
+              const circle = L.circleMarker([lat, lon], {
+                radius,
+                color: '#ff4d4f',
+                fillColor: '#ff7a7a',
+                fillOpacity: 0.7,
+                weight: 1
+              });
+              const place = eq.place || eq.location || '';
+              const html = `<div class="popup"><div class="popup-title">Magnitude ${mag}</div>
+                <div><strong>Location:</strong> ${place}</div><div><strong>Date:</strong> ${prettyDate(time)}</div></div>`;
+              circle.bindPopup(html);
+              eqCluster.addLayer(circle);
+            }
+          });
+
+          cycloneData.forEach(cy => {
+            const lat = Number(cy.LAT || cy.lat || cy.latitude);
+            const lon = Number(cy.LON || cy.lon || cy.longitude);
+            if (!isFinite(lat) || !isFinite(lon)) return;
+            const year = Number(cy.YEAR || cy.year || (new Date(cy.DATE || cy.date)).getFullYear()) || null;
+            const yearOK = (year === null) ? true : (year >= minYear && year <= maxYear);
+            if (yearOK) {
+              const name = cy.NAME || cy.name || 'Cyclone';
+              const wind = cy.WMO_WIND || cy.wind || '';
+              const icon = L.icon({
+                iconUrl: cy.iconUrl || 'https://cdn-icons-png.flaticon.com/512/4005/4005940.png',
+                iconSize: [28, 28],
+                iconAnchor: [14, 14]
+              });
+              const marker = L.marker([lat, lon], { icon });
+              const html = `<div class="popup"><div class="popup-title">${name}</div>
+                <div><strong>Year:</strong> ${year}</div><div><strong>Wind:</strong> ${wind}</div></div>`;
+              marker.bindPopup(html);
+              cyCluster.addLayer(marker);
+            }
+          });
+
+          if (earthquakeToggle.checked) {
+            if (!map.hasLayer(eqCluster)) map.addLayer(eqCluster);
+          } else {
+            if (map.hasLayer(eqCluster)) map.removeLayer(eqCluster);
+          }
+
+          if (cycloneToggle.checked) {
+            if (!map.hasLayer(cyCluster)) map.addLayer(cyCluster);
+          } else {
+            if (map.hasLayer(cyCluster)) map.removeLayer(cyCluster);
+          }
+        }
+
+        function fitToData() {
+          const latlngs = [];
+          earthquakeData.forEach(eq => {
+            const lat = Number(eq.latitude || eq.lat || (eq.latlng && eq.latlng[0]));
+            const lon = Number(eq.longitude || eq.lon || (eq.latlng && eq.latlng[1]) || eq.lng);
+            if (isFinite(lat) && isFinite(lon)) latlngs.push([lat, lon]);
+          });
+          cycloneData.forEach(cy => {
+            const lat = Number(cy.LAT || cy.lat || cy.latitude), lon = Number(cy.LON || cy.lon || cy.longitude);
+            if (isFinite(lat) && isFinite(lon)) latlngs.push([lat, lon]);
+          });
+          if (latlngs.length) map.fitBounds(latlngs, { padding: [40, 40] });
+        }
+
+        applyBtn.addEventListener('click', applyFilters);
+        resetBtn.addEventListener('click', () => {
+          minMagInput.value = '{{ min_mag|default:0 }}';
+          maxMagInput.value = '{{ max_mag|default:10 }}';
+          minYearInput.value = '{{ min_year|default:1900 }}';
+          maxYearInput.value = '{{ max_year|default:2100 }}';
+          earthquakeToggle.checked = true;
+          cycloneToggle.checked = true;
+          applyFilters();
+          fitToData();
+        });
+
+        earthquakeToggle.addEventListener('change', applyFilters);
+        cycloneToggle.addEventListener('change', applyFilters);
+
+        searchBtn.addEventListener('click', async () => {
+          const q = searchBox.value.trim();
+          if (!q) return;
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
+            const json = await res.json();
+            if (Array.isArray(json) && json.length) {
+              const item = json[0];
+              map.setView([parseFloat(item.lat), parseFloat(item.lon)], 8);
+            } else alert('No results');
+          } catch (e) { alert('Search failed'); }
+        });
+
+        locateBtn.addEventListener('click', () => {
+          map.locate({ setView: true, maxZoom: 12 });
+        });
+
+        function toCSV(rows) {
+          const cols = Object.keys(rows[0] || {});
+          const esc = v => `"${String((v === null || v === undefined) ? '' : v).replace(/"/g, '""')}"`;
+          return [cols.join(',')].concat(rows.map(r => cols.map(c => esc(r[c])).join(','))).join('\n');
+        }
+        downloadBtn.addEventListener('click', () => {
+          const minMag = parseFloat(minMagInput.value) || -Infinity;
+          const maxMag = parseFloat(maxMagInput.value) || Infinity;
+          const minYear = parseInt(minYearInput.value) || -Infinity;
+          const maxYear = parseInt(maxYearInput.value) || Infinity;
+          const rows = [];
+          earthquakeData.forEach(eq => {
+            const mag = Number(eq.magnitude || eq.mag || 0);
+            const time = eq.time || eq.date || '';
+            const year = (new Date(time)).getFullYear() || null;
+            const magOK = (mag >= minMag && mag <= maxMag);
+            const yearOK = (year === null) ? true : (year >= minYear && year <= maxYear);
+            if (magOK && yearOK && earthquakeToggle.checked) rows.push(Object.assign({ type: 'earthquake', mag: mag, year: year }, eq));
+          });
+          cycloneData.forEach(cy => {
+            const year = Number(cy.YEAR || cy.year || (new Date(cy.DATE || cy.date)).getFullYear()) || null;
+            const yearOK = (year === null) ? true : (year >= minYear && year <= maxYear);
+            if (yearOK && cycloneToggle.checked) rows.push(Object.assign({ type: 'cyclone', year: year }, cy));
+          });
+          if (!rows.length) { alert('No data to export'); return; }
+          const csv = toCSV(rows);
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'disaster_data.csv'; document.body.appendChild(a); a.click();
+          setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+        });
+
+        applyFilters();
         fitToData();
-      });
 
-      // search (Nominatim)
-      searchBtn.addEventListener('click', async () => {
-        const q = searchBox.value.trim();
-        if (!q) return;
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
-          const json = await res.json();
-          if (Array.isArray(json) && json.length) {
-            const item = json[0];
-            map.setView([parseFloat(item.lat), parseFloat(item.lon)], 8);
-          } else alert('No results');
-        } catch(e){ alert('Search failed'); }
-      });
+        window.__disaster_map = { map, eqCluster, cyCluster };
 
-      // locate
-      locateBtn.addEventListener('click', () => {
-        map.locate({ setView: true, maxZoom: 12 });
-      });
-
-      // CSV export
-      function toCSV(rows) {
-        const cols = Object.keys(rows[0] || {});
-        const esc = v => `"${String((v===null||v===undefined)?'':v).replace(/"/g,'""')}"`;
-        return [cols.join(',')].concat(rows.map(r => cols.map(c => esc(r[c])).join(','))).join('\n');
+      } catch (err) {
+        console.error('Map init error:', err);
+        const mapDiv = document.getElementById('map');
+        if (mapDiv) mapDiv.innerHTML = '<div style="color:#fff;padding:20px;">Map failed to initialize. Check console for errors.</div>';
       }
-      downloadBtn.addEventListener('click', () => {
-        const minMag = parseFloat(minMagInput.value) || -Infinity;
-        const maxMag = parseFloat(maxMagInput.value) || Infinity;
-        const minYear = parseInt(minYearInput.value) || -Infinity;
-        const maxYear = parseInt(maxYearInput.value) || Infinity;
-        const rows = [];
-        eqMarkers.forEach(obj => {
-          const magOK = (obj.mag >= minMag && obj.mag <= maxMag);
-          const yearOK = (obj.year === null) ? true : (obj.year >= minYear && obj.year <= maxYear);
-          if (magOK && yearOK) rows.push(Object.assign({type:'earthquake',mag:obj.mag,year:obj.year}, obj.raw));
-        });
-        cyMarkers.forEach(obj => {
-          const yearOK = (obj.year === null) ? true : (obj.year >= minYear && obj.year <= maxYear);
-          if (yearOK) rows.push(Object.assign({type:'cyclone',year:obj.year}, obj.raw));
-        });
-        if (!rows.length) { alert('No data to export'); return; }
-        const csv = toCSV(rows);
-        const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'disaster_data.csv'; document.body.appendChild(a); a.click();
-        setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1500);
-      });
-
-      // initialize
-      applyFilters();
-      fitToData();
-
-      // expose for debugging
-      window.__disaster_map = { map, eqMarkers, cyMarkers, eqCluster, cyCluster };
-
-    } catch (err) {
-      console.error('Map init error:', err);
-      // show a simple fallback message if map fails
-      const mapDiv = document.getElementById('map');
-      if (mapDiv) mapDiv.innerHTML = '<div style="color:#fff;padding:20px;">Map failed to initialize. Check console for errors.</div>';
-    }
-  });
+    });
   </script>
 </body>
+
 </html>
