@@ -1,5 +1,8 @@
 {
   "dependencies": {
-    "cesium": "^1.132.0"
+    "cesium": "^1.132.0",
+    "clsx": "^2.1.1",
+    "motion": "^12.23.12",
+    "tailwind-merge": "^3.3.1"
   }
 }

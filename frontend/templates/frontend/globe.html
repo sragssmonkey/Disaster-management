@@ -1,167 +1,219 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/Cesium.js"></script>
-  <link href="https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
-  <title>Disaster Management Globe — Bhuvan 3D</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Disaster Management Globe</title>
+
+  <!-- Minimal styling -->
   <style>
-    #cesiumContainer { width: 100%; height: 100%; }
+    html, body, #cesiumContainer { width:100%; height:100%; margin:0; padding:0; overflow:hidden; background:#0b1220; color:#fff; }
+    .controls { position: absolute; top: 12px; left: 12px; background: rgba(8,10,15,0.9); padding: 12px; border-radius: 8px; z-index: 999; color: #fff; font-family: sans-serif; }
+    .controls label { display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:14px; }
+    .controls button { margin-top: 8px; padding:6px 10px; border-radius:6px; border:none; background:#2563eb; color:white; cursor:pointer; }
+    .legend { position: absolute; bottom: 12px; left:12px; background: rgba(255,255,255,0.9); color:#000; border-radius:6px; padding:8px; font-size:12px; display:none; }
   </style>
+
+  <!-- Cesium -->
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/Cesium.js"></script>
 </head>
-<body class="bg-gray-900 text-white font-sans">
-  
-  <!-- Navbar -->
-  <nav class="w-full flex justify-between items-center px-6 py-4 bg-black shadow-md sticky top-0 z-10">
-    <h1 class="text-2xl font-bold">🌍 Disaster Management — Bhuvan 3D Globe</h1>
-    <a href="{% url 'home' %}">
-      <button class="px-5 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl hover:opacity-90 transition shadow-lg">
-        Go To Home
-      </button>
-    </a>
-  </nav>
+<body>
+  <div id="cesiumContainer"></div>
 
-  <div class="flex h-[calc(100vh-64px)]">
-    <!-- Cesium Globe -->
-    <div class="w-[75%] h-full rounded-r-2xl overflow-hidden shadow-lg border border-gray-700">
-      <div id="cesiumContainer"></div>
-    </div>
-
-    <!-- Sidebar -->
-    <div class="w-[25%] h-full bg-black p-6 flex flex-col rounded-l-2xl shadow-lg border-l border-gray-700">
-      <h2 class="text-3xl font-bold mb-6 border-b border-gray-600 pb-2">Layers / Actions</h2>
-
-      <!-- Layer Controls -->
-      <div class="space-y-4 flex-1">
-        <label class="flex items-center gap-3">
-          <input type="checkbox" id="bhuvanLayer" class="w-5 h-5 accent-blue-500">
-          <span>Bhuvan Satellite Layer</span>
-        </label>
-        <label class="flex items-center gap-3">
-          <input type="checkbox" id="weatherLayer" class="w-5 h-5 accent-green-500">
-          <span>Weather Overlay</span>
-        </label>
-        <label class="flex items-center gap-3">
-          <input type="checkbox" id="disasterReports" class="w-5 h-5 accent-yellow-500">
-          <span>Disaster Reports</span>
-        </label>
-        <label class="flex items-center gap-3">
-          <input type="checkbox" id="rescueHotspots" class="w-5 h-5 accent-red-500">
-          <span>Rescue Hotspots</span>
-        </label>
-        <label class="flex items-center gap-3">
-          <input type="checkbox" id="heatmapToggle" class="w-5 h-5 accent-purple-500">
-          <span>ML Heatmap</span>
-        </label>
-      </div>
-
-      <!-- Earthquake Map Button -->
+  <div class="controls" role="toolbar" aria-label="Layer controls">
+    <label><input type="checkbox" id="bhuvanLayer" checked /> Bhuvan Satellite Layer</label>
+    <label><input type="checkbox" id="weatherLayer" /> Weather Overlay (requires API key)</label>
+    <label><input type="checkbox" id="disasterReports" checked /> Disaster Reports</label>
+    <label><input type="checkbox" id="rescueHotspots" checked /> Rescue Hotspots</label>
+    <label><input type="checkbox" id="mlHeatmap" /> ML Heatmap</label>
+    <button id="refreshReports">Refresh reports</button>
+    <!--<button id="viewHistorical">View Historical Data</button>-->
+    <!-- Earthquake Map Button -->
       <div class="mt-6 border-t border-gray-700 pt-4">
         <a href="{% url 'disaster_map' %}">
           <button class="w-full px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition shadow-md">
-            🌐 View Earthquake Map
+            🌐 View Historical Data Map
           </button>
-        </a>
-      </div>
-    </div>
-  </div>
 
-  <!-- Cesium Script -->
-  <script type="module">
-    Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0NGJjY2U0ZC0zMThmLTQwYmYtOWZmNS05ZDczMmM5OGMzNDciLCJpZCI6MzM2NTM5LCJpYXQiOjE3NTY0Njc4MTJ9.0fikg7ZsmBpEWcpu1gAb62kGQALk_9GZJxXsPFpzAQ8";
+  <div class="legend" id="legend">Layer info</div>
 
-    const viewer = new Cesium.Viewer("cesiumContainer", {
-      terrain: Cesium.Terrain.fromWorldTerrain(),
-      animation: false,
+  <script>
+    // --- Initialize Cesium viewer ---
+    Cesium.Ion.defaultAccessToken = ''; // optional; not required for Esri below
+    const viewer = new Cesium.Viewer('cesiumContainer', {
       timeline: false,
-      fullscreenButton: false,
-      homeButton: true,
+      animation: false,
       sceneModePicker: true,
-      baseLayerPicker: true,
+      baseLayerPicker: false,
+      geocoder: false,
+      homeButton: true,
+      navigationHelpButton: true,
+      infoBox: true
     });
 
-    // Initial camera
-    viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(78.9629, 22.5937, 2500000),
+    // -------------------------
+    // 0) Global basemap (Esri World Imagery) - legal and works without keys
+    // -------------------------
+    const esriProvider = new Cesium.UrlTemplateImageryProvider({
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
     });
+    const baseLayer = viewer.imageryLayers.addImageryProvider(esriProvider);
+    // ensure base is at bottom
+    viewer.imageryLayers.lowerToBottom(baseLayer);
 
-    // ====== Bhuvan Layers with TOKEN ======
-    const BHUVAN_TOKEN = "422c3bc4e365a753a8db8f0c259d43bfe9d9f7c6";
+    // -------------------------
+    // 1) BHUVAN THEME OVERLAY (WMS via proxy)
+    //    This is a thematic layer (watershed buffer). If you want a
+    //    global satellite basemap from Bhuvan, check GetCapabilities for a raster layer name.
+    // -------------------------
+    const BHUVAN_PROXY_BASE = "/proxy/bhuvan/?path=wms";
+    const BHUVAN_LAYER_NAME = "organization:wshd_gariv10buf"; // thematic buffer (change to an imagery layer name if available)
 
-    // Satellite / India3 WMS
     const bhuvanProvider = new Cesium.WebMapServiceImageryProvider({
-      url: "https://bhuvan-iserver.nrsc.gov.in/bhuvan/wms",
-      layers: "india3",
+      url: BHUVAN_PROXY_BASE,
+      layers: BHUVAN_LAYER_NAME,
       parameters: {
         service: "WMS",
-        version: "1.1.1",
+        version: "1.3.0",
         request: "GetMap",
         format: "image/png",
         transparent: "true",
-        token: BHUVAN_TOKEN,
+        CRS: "EPSG:4326"
       },
+      tilingScheme: new Cesium.GeographicTilingScheme(), // required for EPSG:4326
+      rectangle: Cesium.Rectangle.fromDegrees(68, 6, 98, 36) // India bbox
     });
     const bhuvanLayer = viewer.imageryLayers.addImageryProvider(bhuvanProvider);
-    bhuvanLayer.show = false;
+    bhuvanLayer.alpha = 0.6;    // semi-transparent so base shows through
+    bhuvanLayer.show = true;    // on by default (toggle with checkbox)
 
-    document.getElementById("bhuvanLayer").addEventListener("change", (e) => {
-      bhuvanLayer.show = e.target.checked;
-    });
+    // -------------------------
+    // 2) Weather overlay (commented out until you provide an API key)
+    // Replace YOUR_OPENWEATHERMAP_APIKEY with your key OR implement a server-side proxy.
+    // -------------------------
+    // const weatherTileUrl = "https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=YOUR_OPENWEATHERMAP_APIKEY";
+    // const weatherProvider = new Cesium.UrlTemplateImageryProvider({ url: weatherTileUrl });
+    // const weatherLayer = viewer.imageryLayers.addImageryProvider(weatherProvider);
+    // weatherLayer.alpha = 0.6;
+    // weatherLayer.show = false;
 
-    // Flood Hazard Layer
-    const floodProvider = new Cesium.WebMapServiceImageryProvider({
-      url: "https://bhuvan-ras2.nrsc.gov.in/cgi-bin/hazard.exe",
-      layers: "hazard",
-      parameters: {
-        service: "WMS",
-        version: "1.1.1",
-        request: "GetMap",
-        format: "image/png",
-        transparent: "true",
-        token: BHUVAN_TOKEN,
-      },
-    });
-    const floodLayer = viewer.imageryLayers.addImageryProvider(floodProvider);
-    floodLayer.show = false;
-
-    document.getElementById("disasterReports").addEventListener("change", (e) => {
-      floodLayer.show = e.target.checked;
-    });
-
-    // Weather Layer (placeholder, confirm exact WMS layer name)
-    const weatherProvider = new Cesium.WebMapServiceImageryProvider({
-      url: "https://bhuvan-app1.nrsc.gov.in/2dresources/bhuvanstore2.php",
-      layers: "cloud_cover_insat3ds", // replace with correct name from GetCapabilities
-      parameters: {
-        service: "WMS",
-        version: "1.1.1",
-        request: "GetMap",
-        format: "image/png",
-        transparent: "true",
-        token: BHUVAN_TOKEN,
-      },
-    });
-    const weatherLayer = viewer.imageryLayers.addImageryProvider(weatherProvider);
-    weatherLayer.show = false;
-
-    document.getElementById("weatherLayer").addEventListener("change", (e) => {
-      weatherLayer.show = e.target.checked;
-    });
-
-    // Rescue Hotspots
-    document.getElementById("rescueHotspots").addEventListener("change", (e) => {
-      if (e.target.checked) {
-        viewer.entities.add({
-          name: "Rescue Hotspot",
-          position: Cesium.Cartesian3.fromDegrees(77.5946, 12.9716),
-          point: { pixelSize: 14, color: Cesium.Color.CYAN },
+    // -------------------------
+    // 3) Disaster Reports (entities loaded from backend /reports/list)
+    // -------------------------
+    const reportEntities = new Map();
+    async function loadReports() {
+      try {
+        const resp = await fetch("/reports/list");
+        if (!resp.ok) throw new Error("Network response not ok " + resp.status);
+        const json = await resp.json();
+        const reports = json.reports || [];
+        // remove outdated
+        for (const id of Array.from(reportEntities.keys())) {
+          if (!reports.find(r => ("rep-"+r.id) === id)) {
+            const ent = reportEntities.get(id);
+            viewer.entities.remove(ent);
+            reportEntities.delete(id);
+          }
+        }
+        // add new
+        reports.forEach(r => {
+          const id = "rep-" + r.id;
+          if (reportEntities.has(id)) return;
+          const ent = viewer.entities.add({
+            id,
+            position: Cesium.Cartesian3.fromDegrees(r.lng, r.lat),
+            billboard: { image: "https://cdn-icons-png.flaticon.com/512/684/684908.png", scale: 0.06 },
+            label: { text: r.category || "", font: "12px sans-serif", style: Cesium.LabelStyle.FILL_AND_OUTLINE, outlineWidth:2, verticalOrigin: Cesium.VerticalOrigin.TOP, pixelOffset: new Cesium.Cartesian2(0,-18) },
+            description: `Category: ${r.category}<br>Severity: ${r.severity}<br>${r.note || ""}`
+          });
+          reportEntities.set(id, ent);
         });
+      } catch (e) {
+        console.error("Failed to load reports:", e);
+      }
+    }
+    document.getElementById("refreshReports").addEventListener("click", loadReports);
+    document.getElementById("disasterReports").addEventListener("change", (e) => {
+      if (e.target.checked) {
+        loadReports();
       } else {
-        viewer.entities.removeAll();
+        for (const ent of reportEntities.values()) viewer.entities.remove(ent);
+        reportEntities.clear();
       }
     });
+
+    // auto-load reports initially (if checkbox is checked)
+    if (document.getElementById("disasterReports").checked) loadReports();
+
+    // -------------------------
+    // 4) Rescue Hotspots (static example; replace with API if needed)
+    // -------------------------
+    const hotspotEntities = [];
+    function addHotspots() {
+      const hotspots = [
+        { name: "Hotspot - Central", lng: 77.5946, lat: 12.9716 },
+        { name: "Hotspot - East", lng: 78.4867, lat: 17.3850 }
+      ];
+      hotspots.forEach(h => {
+        const e = viewer.entities.add({
+          name: h.name,
+          position: Cesium.Cartesian3.fromDegrees(h.lng, h.lat),
+          point: { pixelSize: 12, color: Cesium.Color.ORANGERED, outlineColor: Cesium.Color.WHITE, outlineWidth: 2 },
+          label: { text: h.name, font: "12px sans-serif", verticalOrigin: Cesium.VerticalOrigin.TOP, pixelOffset: new Cesium.Cartesian2(0,-16) }
+        });
+        hotspotEntities.push(e);
+      });
+    }
+    function removeHotspots() { hotspotEntities.forEach(h => viewer.entities.remove(h)); hotspotEntities.length = 0; }
+
+    document.getElementById("rescueHotspots").addEventListener("change", (e) => {
+      if (e.target.checked) addHotspots(); else removeHotspots();
+    });
+    if (document.getElementById("rescueHotspots").checked) addHotspots();
+
+    // -------------------------
+    // 5) ML Heatmap (Single-tile) - OFF by default so it doesn't occlude
+    // -------------------------
+    const heatProvider = new Cesium.SingleTileImageryProvider({
+      url: "/ml/heatmap.png",
+      rectangle: Cesium.Rectangle.fromDegrees(68, 6, 98, 36) // India bbox (must match server PNG extent)
+    });
+    const heatLayer = viewer.imageryLayers.addImageryProvider(heatProvider);
+    heatLayer.alpha = 0.45;
+    heatLayer.show = false; // OFF by default to avoid covering globe
+
+    document.getElementById("mlHeatmap").addEventListener("change", (e) => {
+      heatLayer.show = e.target.checked;
+    });
+
+    // -------------------------
+    // Wire Bhuvan + Weather toggles
+    // -------------------------
+    document.getElementById("bhuvanLayer").addEventListener("change", (e) => { bhuvanLayer.show = e.target.checked; });
+    // document.getElementById("weatherLayer").addEventListener("change", (e) => { if (weatherLayer) weatherLayer.show = e.target.checked; });
+
+    // -------------------------
+    // Debug helpers (console)
+    // -------------------------
+    console.log("Cesium viewer initialized. Use the control panel to toggle layers.");
+    // Function to quickly try alternate Bhuvan config in console:
+    window.addBhuvanTest = function(version = "1.3.0", crs = "EPSG:4326", tiling = "geographic", layerName = BHUVAN_LAYER_NAME) {
+      const params = { service: "WMS", version, request: "GetMap", format: "image/png", transparent: "true" };
+      if (version === "1.3.0") params.CRS = crs; else params.SRS = crs;
+      const opts = { url: BHUVAN_PROXY_BASE, layers: layerName, parameters: params };
+      if (tiling === "geographic") { opts.tilingScheme = new Cesium.GeographicTilingScheme(); opts.rectangle = Cesium.Rectangle.fromDegrees(68,6,98,36); }
+      const p = new Cesium.WebMapServiceImageryProvider(opts);
+      const l = viewer.imageryLayers.addImageryProvider(p);
+      l.show = true;
+      console.log("Added test Bhuvan provider:", version, crs, tiling, "layer index:", viewer.imageryLayers.indexOf(l));
+      return { provider: p, layer: l };
+    };
+
+    //adding historical button redirect
+//     document.getElementById("viewHistorical").addEventListener("click", () => {
+//   window.location.href = "/disaster_map/";  // Django route
+// });
   </script>
 </body>
 </html>

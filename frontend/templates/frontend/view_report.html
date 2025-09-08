@@ -1,114 +1,495 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Disaster Reports</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Rescuers Dashboard — Modern</title>
 
-  <!-- Leaflet CSS -->
+  <!-- Tailwind for utility styles (optional) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Leaflet & plugins -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css"/>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Leaflet JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster-src.js"></script>
 
   <style>
+    :root { box-sizing: border-box; }
+    *,*::before,*::after { box-sizing: inherit; }
+
+    html,body,#app { height: 100%; margin: 0; }
+    body { background:#0b132b; color:#e6eef8; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+
+    /* Container: full width to avoid unused right gap */
+    .app-wrap {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column; /* mobile default: map first, sidebar after */
+      gap: 1rem;
+      padding: 1rem;
+    }
+
+    /* Desktop: map left, sidebar right */
+    @media (min-width: 768px) {
+      .app-wrap { flex-direction: row; align-items: flex-start; }
+    }
+
+    /* Map area */
+    .map-section { flex: 1 1 0%; min-width: 0; position: relative; display:flex; flex-direction:column; gap:0.75rem; }
     #map {
-      height: 500px;
-      margin-bottom: 20px;
+      width: 100%;
+      min-height: 320px;
+      height: calc(100vh - 240px);
+      border-radius: 12px;
+      z-index: 0;
     }
-    body {
-      background: #0b132b;
-      color: white;
-      font-family: Arial, sans-serif;
-    }
-    .report-container {
-      margin: 20px;
-    }
-    .report {
-      background: #1c2541;
-      padding: 12px;
-      margin-bottom: 12px;
-      border-radius: 8px;
-    }
-    .btn-route {
-      background: #3a506b;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      margin-top: 6px;
+
+    /* Floating toggle on map (top-right) */
+    .map-toggle {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 1100;
+      background: rgba(15,23,42,0.92);
+      color: #e6eef8;
+      border: 1px solid rgba(255,255,255,0.04);
+      padding: 8px 10px;
+      border-radius: 10px;
       cursor: pointer;
-      border-radius: 4px;
+      font-weight: 700;
+      box-shadow: 0 6px 18px rgba(2,6,23,0.6);
+      backdrop-filter: blur(4px);
     }
-    .btn-route:hover {
-      background: #5bc0be;
+
+    /* Directions wrapper placeholder */
+    #directions-wrap { z-index: 1050; width: 100%; }
+
+    /* Sidebar: fixed flex-basis on desktop to avoid extra right gap */
+    #sidebar {
+      background: #0f1724;
+      border-radius: 12px;
+      padding: 16px;
+      color: #e6eef8;
+      overflow: hidden;
     }
+    @media (min-width: 768px) {
+      /* fixed width prevents leftover whitespace on the right */
+      #sidebar { flex: 0 0 30rem; max-width: 30rem; height: calc(100vh - 2rem); overflow-y: auto; }
+    }
+    @media (min-width: 1200px) {
+      #sidebar { flex: 0 0 34rem; max-width: 34rem; }
+    }
+
+    /* Mobile: map first, sidebar below and scrollable */
+    @media (max-width: 420px) {
+      .app-wrap { flex-direction: column; }
+      #map { height: 46vh; min-height: 260px; }
+      #sidebar { max-height: 48vh; overflow-y: auto; margin-top: 0.5rem; }
+    }
+
+    .leaflet-popup-content { white-space: normal; color: inherit; }
+
+    /* Leaflet Routing Machine: theme + ensure above map */
+    .leaflet-routing-container{
+      background: #0b1220 !important;
+      color: #e6eef8 !important;
+      border-radius: 10px !important;
+      box-shadow: 0 14px 40px rgba(2,6,23,0.6) !important;
+      border: 1px solid rgba(99,102,241,0.06) !important;
+      font-size: 0.95rem !important;
+      z-index: 1090 !important;
+      max-height: 60vh;
+      overflow: auto;
+    }
+    .leaflet-routing-container * { color: inherit !important; }
+
+    /* instruction style and highlighted readable override */
+    .leaflet-routing-instruction {
+      background: rgba(148,163,184,0.03) !important;
+      border-radius: 8px !important;
+      margin: 6px 0 !important;
+      padding: 8px !important;
+    }
+    .leaflet-routing-instruction.leaflet-routing-instruction-highlight,
+    .leaflet-routing-instruction.active,
+    .leaflet-routing-instruction.highlight {
+      background: #ffffff !important;
+      color: #111827 !important;
+    }
+    .leaflet-routing-instruction.leaflet-routing-instruction-highlight * { color: #111827 !important; }
+    .leaflet-routing-instruction-distance { color: #9ca3af !important; }
+    .leaflet-routing-instruction.leaflet-routing-instruction-highlight .leaflet-routing-instruction-distance {
+      color: #111827 !important; opacity: 0.95 !important;
+    }
+
+    /* collapse helpers used by toggle */
+    .routing-collapsed { max-height: 3.6rem !important; overflow: hidden !important; }
+    .routing-expanded { max-height: 60vh !important; overflow: auto !important; }
+
+    /* directions header style (inserted by JS) */
+    .directions-header {
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      padding:8px; background: rgba(12,18,28,0.85); border-radius:8px; margin-bottom:6px;
+      color:#e6eef8;
+    }
+    .dir-btn { background:#111827; color:#e6eef8; padding:6px 8px; border-radius:8px; border:none; cursor:pointer; }
+    .dir-close { background:#ef4444; color:#fff; padding:6px 8px; border-radius:8px; border:none; cursor:pointer; }
+
+    /* spacing between report cards */
+    #report-list > .report-card { margin-bottom: 14px; } /* increased spacing */
   </style>
 </head>
-<body class="flex flex-col gap-[1rem]">
-  <h2>🚨 Disaster Reports</h2>
-  <a href="{% url 'report'%}" class="px-4 py-2 w-[7rem] rounded-xl bg-emerald-500 text-emerald-950 font-semibold hover:bg-emerald-400">+ Report</a>
+<body>
+  <div class="app-wrap" id="app">
+    <!-- MAP SECTION (comes first so on mobile map appears before reports) -->
+    <section class="map-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <h1 style="font-size:1.25rem;font-weight:700;">🚨 Rescuers Dashboard</h1>
+        <div style="display:flex;gap:8px;">
+          <a href="{% url 'report' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg" style="background:#10b981;color:#04201b;font-weight:700;">+ Report</a>
+          <button id="locate-me" class="inline-flex items-center px-3 py-2 rounded-lg" style="background:#0f1724;color:#e6eef8;">📍 My location</button>
+        </div>
+      </div>
 
-  <!-- Map -->
-  <div id="map"></div>
+      <!-- placeholder for directions header + moved routing container on mobile -->
+      <div id="directions-wrap"></div>
 
-  <!-- Reports -->
-  <div class="report-container" id="report-list"></div>
+      <!-- the map -->
+      <div id="map"></div>
+
+      <!-- floating toggle button (old style) -->
+      <button id="map-toggle" class="map-toggle" title="Toggle directions">Directions ▾</button>
+
+      <div style="display:flex;gap:.5rem;margin-top:.6rem;">
+        <button id="clear-route" class="px-3 py-2 rounded-lg" style="background:#ef4444;color:white;">Clear Route</button>
+        <button id="fit-bounds" class="px-3 py-2 rounded-lg" style="background:#06b6d4;color:#052026;">Fit All</button>
+      </div>
+    </section>
+
+    <!-- SIDEBAR (below map on mobile, right on desktop) -->
+    <aside id="sidebar">
+      <div style="margin-bottom:.5rem;">
+        <h2 style="font-size:1rem;font-weight:600;">Reports</h2>
+        <p style="color:#9ca3af;font-size:.9rem;">Click a report to center it. Use 'Show Route' to get directions.</p>
+      </div>
+
+      <div style="display:flex;gap:.5rem;margin-bottom:.75rem;">
+        <select id="filter-category" class="rounded" style="flex:1;padding:.5rem;background:#071025;color:#e6eef8;border-radius:8px;border:1px solid rgba(255,255,255,0.03);">
+          <option value="">All categories</option>
+        </select>
+        <select id="filter-severity" class="rounded" style="padding:.5rem;background:#071025;color:#e6eef8;border-radius:8px;border:1px solid rgba(255,255,255,0.03);">
+          <option value="">All severities</option>
+          <option>Low</option><option>Medium</option><option>High</option>
+        </select>
+      </div>
+
+      <div id="report-list" style="display:block;gap:12px;overflow:auto;max-height:60vh;"></div>
+
+      <div id="empty" style="display:none;color:#9ca3af;text-align:center;margin-top:0.75rem;">No reports yet.</div>
+    </aside>
+  </div>
 
   <script>
-    // Load reports safely as JSON
-    var reports = JSON.parse('{{ reports_json|escapejs }}');
-    console.log("Reports:", reports);
+    // reports_json from Django template (escapejs)
+    var reports = [];
+    try {
+      reports = JSON.parse('{{ reports_json|escapejs }}');
+    } catch (e) {
+      console.warn('Could not parse reports_json, defaulting to empty array.', e);
+      reports = [];
+    }
 
-    // Initialize map
-    var map = L.map('map').setView([20.5937, 78.9629], 5);
+    // initialize map
+    var map = L.map('map', { zoomControl: true }).setView([20.5937, 78.9629], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+    window.map = map;
 
-    var routingControl;
+    var rescuerMarker = null;
+    var routingControl = null;
 
-    // Function to show route from rescuer to report
-    function showRoute(lat, lng) {
-      if (!navigator.geolocation) {
-        alert("Geolocation not supported.");
-        return;
-      }
+    // markers + clusters
+    var markers = L.markerClusterGroup();
+    var reportMarkers = [];
 
-      navigator.geolocation.getCurrentPosition(function(position) {
-        var rescuerLat = position.coords.latitude;
-        var rescuerLng = position.coords.longitude;
-
-        if (routingControl) {
-          map.removeControl(routingControl);
-        }
-
-        routingControl = L.Routing.control({
-          waypoints: [
-            L.latLng(rescuerLat, rescuerLng),
-            L.latLng(lat, lng)
-          ],
-          routeWhileDragging: true
-        }).addTo(map);
+    function iconForSeverity(sev) {
+      var color = sev === 'High' ? 'red' : (sev === 'Medium' ? 'orange' : 'green');
+      return L.divIcon({
+        html: `<div style="background:${color};width:18px;height:18px;border-radius:50%;box-shadow:0 0 0 3px rgba(0,0,0,0.25)"></div>`,
+        className: '',
+        iconSize: [18,18]
       });
     }
 
-    // Add markers + report list
-    reports.forEach(function(report) {
-      var marker = L.marker([report.lat, report.lng]).addTo(map)
-        .bindPopup("<b>" + report.category + "</b><br>" + report.note);
+    function addReportsToMap(list) {
+      markers.clearLayers();
+      reportMarkers = [];
+      list.forEach(function(r){
+        if (!r.lat || !r.lng) return;
+        var m = L.marker([r.lat, r.lng], { icon: iconForSeverity(r.severity) })
+          .bindPopup(`<b>${r.category}</b><br><small>Severity: ${r.severity || 'Unknown'}</small><p>${r.note || ''}</p>`);
+        markers.addLayer(m);
+        reportMarkers.push({ report: r, marker: m });
+      });
+      map.addLayer(markers);
+      if (reportMarkers.length) {
+        var group = L.featureGroup(reportMarkers.map(x => x.marker));
+        map.fitBounds(group.getBounds().pad(0.2));
+      }
+    }
 
-      var reportDiv = document.createElement("div");
-      reportDiv.className = "report";
-      reportDiv.innerHTML = `
-        <b>Category:</b> ${report.category} <br>
-        <b>Severity:</b> ${report.severity} <br>
-        <b>Note:</b> ${report.note} <br>
-        <button class="btn-route" onclick="showRoute(${report.lat}, ${report.lng})">🚑 Show Route</button>
-      `;
-      document.getElementById("report-list").appendChild(reportDiv);
+    // sidebar rendering
+    var reportListEl = document.getElementById('report-list');
+    var filterCategory = document.getElementById('filter-category');
+    var filterSeverity = document.getElementById('filter-severity');
+    var emptyEl = document.getElementById('empty');
+
+    function populateCategoryFilter(list) {
+      var categories = Array.from(new Set(list.map(r => r.category).filter(Boolean))).sort();
+      categories.forEach(function(c) {
+        var opt = document.createElement('option');
+        opt.value = c; opt.textContent = c;
+        filterCategory.appendChild(opt);
+      });
+    }
+
+    function renderList(list) {
+      reportListEl.innerHTML = '';
+      if (!list.length) {
+        emptyEl.style.display = 'block';
+      } else {
+        emptyEl.style.display = 'none';
+      }
+
+      list.forEach(function(r) {
+        var card = document.createElement('div');
+        card.className = 'report-card';
+        card.style.background = '#071025';
+        card.style.borderRadius = '8px';
+        card.style.padding = '12px';
+        card.style.marginBottom = '0'; // spacing handled by #report-list > .report-card
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <div style="font-weight:700;font-size:1rem;">${r.category || '—'}</div>
+              <div style="color:#9ca3af;font-size:.88rem;margin-top:4px;">
+                ${r.note ? (r.note.length>120 ? r.note.slice(0,120)+'...' : r.note) : 'No note'}
+              </div>
+            </div>
+            <div style="color:#cbd5e1;margin-left:12px;font-size:.95rem;">${r.severity || 'Unknown'}</div>
+          </div>
+          <div style="margin-top:.6rem;display:flex;gap:.5rem;">
+            <button class="show-btn" data-lat="${r.lat}" data-lng="${r.lng}" style="background:#2563eb;color:white;padding:.35rem .7rem;border-radius:6px;border:none;cursor:pointer">Show</button>
+            <button class="route-btn" data-lat="${r.lat}" data-lng="${r.lng}" style="background:#10b981;color:#04201b;padding:.35rem .7rem;border-radius:6px;border:none;cursor:pointer">Show Route</button>
+          </div>
+        `;
+        reportListEl.appendChild(card);
+      });
+
+      // attach events
+      Array.from(document.getElementsByClassName('show-btn')).forEach(function(b){
+        b.addEventListener('click', function(){
+          var lat = parseFloat(this.dataset.lat), lng = parseFloat(this.dataset.lng);
+          map.setView([lat,lng], 15);
+          markers.eachLayer(function(layer){
+            if (layer.getLatLng().lat === lat && layer.getLatLng().lng === lng) {
+              layer.openPopup();
+            }
+          });
+        });
+      });
+
+      Array.from(document.getElementsByClassName('route-btn')).forEach(function(b){
+        b.addEventListener('click', function(){
+          var lat = parseFloat(this.dataset.lat), lng = parseFloat(this.dataset.lng);
+          showRoute(lat, lng);
+        });
+      });
+    }
+
+    function applyFilters() {
+      var cat = filterCategory.value;
+      var sev = filterSeverity.value;
+      var filtered = reports.filter(function(r){
+        var ok = true;
+        if (cat) ok = ok && (r.category === cat);
+        if (sev) ok = ok && (r.severity === sev);
+        return ok;
+      });
+      addReportsToMap(filtered);
+      renderList(filtered);
+    }
+
+    // initial population
+    populateCategoryFilter(reports);
+    addReportsToMap(reports);
+    renderList(reports);
+    filterCategory.addEventListener('change', applyFilters);
+    filterSeverity.addEventListener('change', applyFilters);
+
+    // locate me
+    document.getElementById('locate-me').addEventListener('click', function(){
+      if (!navigator.geolocation) { alert('Geolocation not supported'); return; }
+      navigator.geolocation.getCurrentPosition(function(pos){
+        var lat = pos.coords.latitude, lng = pos.coords.longitude;
+        if (rescuerMarker) map.removeLayer(rescuerMarker);
+        rescuerMarker = L.marker([lat,lng], { title: 'You' }).addTo(map).bindPopup('<b>You are here</b>').openPopup();
+        map.setView([lat,lng], 13);
+      }, function(err){ alert('Could not get your location: ' + err.message); }, { enableHighAccuracy:true, timeout:10000 });
     });
+
+    // fit bounds
+    document.getElementById('fit-bounds').addEventListener('click', function(){
+      if (reportMarkers.length) {
+        var group = L.featureGroup(reportMarkers.map(x => x.marker));
+        map.fitBounds(group.getBounds().pad(0.2));
+      } else map.setView([20.5937,78.9629],5);
+    });
+
+    // Clear route
+    document.getElementById('clear-route').addEventListener('click', function(){
+      if (routingControl) {
+        try { map.removeControl(routingControl); } catch(e) {}
+        routingControl = null;
+      }
+      var wrap = document.getElementById('directions-wrap');
+      if (wrap) wrap.innerHTML = '';
+      setTimeout(() => map.invalidateSize(), 120);
+    });
+
+    // Floating map toggle button (top-right)
+    document.getElementById('map-toggle').addEventListener('click', function(){
+      var container = document.querySelector('.leaflet-routing-container');
+      if (!container) { alert('No directions open'); return; }
+      if (container.classList.contains('routing-collapsed')) {
+        container.classList.remove('routing-collapsed');
+        container.classList.add('routing-expanded');
+        this.textContent = 'Directions ▴';
+      } else {
+        container.classList.remove('routing-expanded');
+        container.classList.add('routing-collapsed');
+        this.textContent = 'Directions ▾';
+      }
+      setTimeout(()=>map.invalidateSize(), 200);
+    });
+
+    // showRoute: creates Routing control, moves it into wrapper on mobile, adds header with toggle/close
+    function showRoute(lat, lng) {
+      if (!navigator.geolocation) { alert('Geolocation not supported'); return; }
+      navigator.geolocation.getCurrentPosition(function(pos){
+        var uLat = pos.coords.latitude, uLng = pos.coords.longitude;
+
+        if (routingControl) {
+          try { map.removeControl(routingControl); } catch(e) {}
+          routingControl = null;
+        }
+
+        routingControl = L.Routing.control({
+          waypoints: [ L.latLng(uLat,uLng), L.latLng(lat,lng) ],
+          routeWhileDragging: false,
+          showAlternatives: false,
+          lineOptions: { addWaypoints: false }
+        }).addTo(map);
+
+        // after insertion, create header and move container on mobile
+        setTimeout(function(){
+          try {
+            var container = routingControl.getContainer ? routingControl.getContainer() : routingControl._container;
+            if (!container) return;
+            container.style.zIndex = 1090;
+
+            var wrap = document.getElementById('directions-wrap');
+
+            // create header if missing
+            if (wrap && !wrap.querySelector('.directions-header')) {
+              var header = document.createElement('div');
+              header.className = 'directions-header';
+              var left = document.createElement('div');
+              left.style.display = 'flex'; left.style.alignItems = 'center'; left.style.gap = '10px';
+              var title = document.createElement('div'); title.textContent = 'Directions'; title.style.fontWeight = 700;
+              var meta = document.createElement('div'); meta.className = 'directions-meta'; meta.id = 'directions-summary'; meta.style.color = '#9ca3af';
+              left.appendChild(title); left.appendChild(meta);
+
+              var right = document.createElement('div');
+              var toggleBtn = document.createElement('button'); toggleBtn.className = 'dir-btn'; toggleBtn.textContent = 'Toggle';
+              var closeBtn = document.createElement('button'); closeBtn.className = 'dir-close'; closeBtn.textContent = 'Close';
+              right.appendChild(toggleBtn); right.appendChild(closeBtn);
+
+              header.appendChild(left); header.appendChild(right);
+              wrap.appendChild(header);
+
+              toggleBtn.addEventListener('click', function(){
+                if (container.classList.contains('routing-collapsed')) {
+                  container.classList.remove('routing-collapsed'); container.classList.add('routing-expanded');
+                  document.getElementById('map-toggle').textContent = 'Directions ▴';
+                } else {
+                  container.classList.remove('routing-expanded'); container.classList.add('routing-collapsed');
+                  document.getElementById('map-toggle').textContent = 'Directions ▾';
+                }
+                setTimeout(()=>map.invalidateSize(), 220);
+              });
+
+              closeBtn.addEventListener('click', function(){
+                try { if (routingControl) { map.removeControl(routingControl); routingControl = null; } } catch(e) {}
+                wrap.innerHTML = '';
+                setTimeout(()=>map.invalidateSize(), 120);
+              });
+            }
+
+            // move container into wrapper on small screens so it pushes map down
+            if (window.innerWidth < 768 && wrap) {
+              wrap.appendChild(container);
+              container.style.position = 'relative';
+              container.classList.add('routing-collapsed'); // collapsed by default on mobile
+              document.getElementById('map-toggle').textContent = 'Directions ▾';
+            } else {
+              // desktop: ensure overlay (RM default)
+              if (container.parentElement && container.parentElement.id === 'directions-wrap') {
+                document.body.appendChild(container);
+                container.style.position = '';
+              }
+            }
+
+            // short summary into header meta if present
+            var summary = container.querySelector('.leaflet-routing-summary');
+            var metaEl = document.getElementById('directions-summary');
+            if (summary && metaEl) metaEl.textContent = summary.textContent.trim().replace(/\s+/g,' ');
+
+            setTimeout(()=>map.invalidateSize(), 300);
+          } catch (e) {
+            console.warn('Could not reposition routing container', e);
+          }
+        }, 150);
+
+      }, function(err){
+        alert('Could not get your location: ' + err.message);
+      }, { enableHighAccuracy: true, timeout: 10000 });
+    }
+
+    // highlight corresponding sidebar card when marker clicked
+    markers.on('click', function(e){
+      var lat = e.layer.getLatLng().lat, lng = e.layer.getLatLng().lng;
+      var items = Array.from(reportListEl.children);
+      for (var i=0;i<items.length;i++){
+        var b = items[i].querySelector('.show-btn');
+        if (!b) continue;
+        if (parseFloat(b.dataset.lat)===lat && parseFloat(b.dataset.lng)===lng) {
+          items[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
+          items[i].style.boxShadow = '0 0 0 3px rgba(59,130,246,0.16)';
+          setTimeout(()=> items[i].style.boxShadow = '', 1400);
+        }
+      }
+    });
+
+    // show empty if no reports
+    if (!reports || !reports.length) { emptyEl.style.display = 'block'; }
   </script>
 </body>
 </html>
