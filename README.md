@@ -152,5 +152,3 @@ python manage.py runserver
 
 
 
-Do you want me to also add a **section on making a PR (pull request)** to `main`, since you said no one should push directly?
-
