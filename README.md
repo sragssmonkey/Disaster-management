@@ -37,7 +37,7 @@ An India-centric disaster-management geoportal.
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/<org-or-username>/Disaster-management.git
+git clone https://github.com/sragssmonkey/Disaster-management.git
 cd Disaster-management
 ```
 
