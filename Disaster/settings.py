@@ -14,8 +14,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Environment variables
 # -----------------------
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "fallback-secret-key")
-DEBUG = os.environ.get("DEBUG", "True") == "True"
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
+DEBUG = os.environ.get("DEBUG", "False") == "True"
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+
+# Add Render domain to allowed hosts
+if not DEBUG:
+    ALLOWED_HOSTS.extend([
+        '.onrender.com',
+        '.render.com'
+    ])
 
 # -----------------------
 # Application definition
@@ -67,6 +74,7 @@ WSGI_APPLICATION = 'Disaster.wsgi.application'
 # -----------------------
 # Database
 # -----------------------
+# Use SQLite for both development and production
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -115,7 +123,12 @@ LOGOUT_REDIRECT_URL = 'home'
 # -----------------------
 # CORS
 # -----------------------
-CORS_ALLOW_ALL_ORIGINS = True  # tighten later in production
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only allow all origins in development
+if not DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        "https://disaster-management.onrender.com",
+        "https://*.onrender.com",
+    ]
 
 # -----------------------
 # App constants

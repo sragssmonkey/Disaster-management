@@ -10,15 +10,12 @@ WORKDIR /app
 
 # Set Django environment variables
 ENV DJANGO_SETTINGS_MODULE=Disaster.settings
-ENV DJANGO_SECRET_KEY=your-secret-key
-ENV DEBUG=False
-ENV ALLOWED_HOSTS=.onrender.com
 ENV STATIC_ROOT=/app/staticfiles
+ENV MEDIA_ROOT=/app/media
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
-    libpq-dev \
     python3-dev \
     libjpeg-dev \
     zlib1g-dev \
@@ -33,6 +30,19 @@ RUN pip install -r requirements.txt
 # Copy project code
 COPY . .
 
-# Collect static files and run server
-CMD python manage.py collectstatic --noinput && \
-    gunicorn Disaster.wsgi:application --bind 0.0.0.0:8000
+# Create directories for static and media files
+RUN mkdir -p /app/staticfiles /app/media
+
+# Collect static files
+RUN python manage.py collectstatic --noinput
+
+# Create a non-root user
+RUN adduser --disabled-password --gecos '' appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Expose port
+EXPOSE 8000
+
+# Run the application
+CMD gunicorn Disaster.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
