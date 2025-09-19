@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: disaster-management
+    env: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+databases:
+  - name: disaster-db
+    plan: free
