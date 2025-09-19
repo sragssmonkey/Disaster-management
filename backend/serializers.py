@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.conf import settings
-from .models import CrowdReport
+from .models import CrowdReport, EmergencyReport, EmergencyResponse
 
 class CrowdReportSerializer(serializers.ModelSerializer):
     class Meta:
@@ -28,7 +28,36 @@ class CrowdReportSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"lat": "Outside India bounds", "lng": "Outside India bounds"})
         return data
 
-from rest_framework import serializers
+class EmergencyReportSerializer(serializers.ModelSerializer):
+    priority_score = serializers.ReadOnlyField()
+    report_id = serializers.ReadOnlyField()
+    
+    class Meta:
+        model = EmergencyReport
+        fields = "__all__"
+        read_only_fields = ("created_at", "updated_at", "acknowledged_at", "resolved_at")
+    
+    def validate_phone_number(self, value):
+        # Basic phone number validation
+        import re
+        if not re.match(r'^\+?[1-9]\d{1,14}$', value):
+            raise serializers.ValidationError("Invalid phone number format")
+        return value
+    
+    def validate_severity(self, value):
+        if value not in [1, 2, 3, 4]:
+            raise serializers.ValidationError("Severity must be between 1 and 4")
+        return value
+
+
+class EmergencyResponseSerializer(serializers.ModelSerializer):
+    responder_name = serializers.CharField(source='responder.username', read_only=True)
+    
+    class Meta:
+        model = EmergencyResponse
+        fields = "__all__"
+        read_only_fields = ("created_at",)
+
 
 class CycloneInputSerializer(serializers.Serializer):
     num_points = serializers.IntegerField(required=False, default=15)

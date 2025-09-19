@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-gx=fq-9v@xq3rsayfjk1&pe8(=vzcum38y-l(*iyyk-l_z_bm_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'https://1a627dd58d3f.ngrok-free.app']
 
 
 # Application definition
@@ -139,3 +139,15 @@ INDIA_BOUNDS = {
     "MIN_LAT": 6.0, "MAX_LAT": 37.5,
     "MIN_LNG": 68.0, "MAX_LNG": 97.5,
 }
+
+# Emergency Reporting System Configuration
+TWILIO_ACCOUNT_SID = 'your_twilio_account_sid_here'
+TWILIO_AUTH_TOKEN = 'your_twilio_auth_token_here'
+TWILIO_PHONE_NUMBER = '+1234567890'
+
+# SMS Gateway Configuration (alternative to Twilio)
+SMS_GATEWAY_URL = 'https://api.smsgateway.com/send'
+SMS_GATEWAY_API_KEY = 'your_sms_gateway_api_key_here'
+
+# Base URL for webhooks
+BASE_URL = 'http://localhost:8000'
