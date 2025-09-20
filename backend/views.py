@@ -7,8 +7,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import CrowdReport
 from rest_framework import generics
-from .models import CrowdReport
-from .serializers import CrowdReportSerializer
+from .models import CrowdReport, EmergencyReport, EmergencyResponse
+from .serializers import CrowdReportSerializer, EmergencyReportSerializer, EmergencyResponseSerializer
 from django.http import JsonResponse
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -304,3 +304,557 @@ def ml_heatmap_png(request):
     return HttpResponse(buf.read(), content_type='image/png')
 
 # --- End appended views ---
+
+# -------------------------
+# Emergency Reporting Views (SMS, IVR, USSD)
+# -------------------------
+
+import re
+import uuid
+from django.utils import timezone
+from django.db import transaction
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def sms_emergency_report(request):
+    """
+    Handle emergency reports via SMS
+    Expected SMS format: "EMERGENCY <category> <severity> <description> <location>"
+    Example: "EMERGENCY flood 3 water level rising fast near main road"
+    """
+    try:
+        from .sms_service import SMSService
+        from .location_service import LocationService
+        
+        data = request.data
+        phone_number = data.get('phone_number', '').strip()
+        message = data.get('message', '').strip()
+        
+        if not phone_number or not message:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Phone number and message are required'
+            }, status=400)
+        
+        # Parse SMS message using SMS service
+        sms_service = SMSService()
+        parsed_data = sms_service.parse_emergency_sms(message)
+        
+        if not parsed_data['valid']:
+            # Send error message back to user
+            sms_service.send_sms(phone_number, parsed_data['error'])
+            return JsonResponse({
+                'status': 'error',
+                'message': parsed_data['error']
+            }, status=400)
+        
+        # Detect location from phone number
+        location_info = LocationService.detect_location_from_phone_number(phone_number)
+        
+        # Create emergency report
+        with transaction.atomic():
+            emergency_report = EmergencyReport.objects.create(
+                channel='sms',
+                phone_number=phone_number,
+                category=parsed_data['category'],
+                severity=parsed_data['severity'],
+                description=parsed_data['description'],
+                district=location_info.get('district') if location_info else None,
+                state=location_info.get('state') if location_info else None,
+                raw_data={
+                    'original_message': message,
+                    'parsed_data': parsed_data
+                }
+            )
+            
+            # Calculate priority score
+            emergency_report.priority_score = emergency_report.get_priority_score()
+            emergency_report.save()
+        
+        # Send confirmation SMS
+        sms_service.send_emergency_confirmation(phone_number, emergency_report.report_id)
+        
+        return JsonResponse({
+            'status': 'success',
+            'report_id': emergency_report.report_id,
+            'message': f'Emergency report {emergency_report.report_id} received. Help is on the way.'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Failed to process SMS report: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def ivr_emergency_report(request):
+    """
+    Handle emergency reports via IVR (Interactive Voice Response)
+    """
+    try:
+        from .ivr_service import IVRService
+        from .location_service import LocationService
+        
+        data = request.data
+        phone_number = data.get('phone_number', '').strip()
+        call_id = data.get('call_id', '')
+        transcript = data.get('transcript', '').strip()
+        category = data.get('category', 'other')
+        severity = int(data.get('severity', 1))
+        location = data.get('location', '')
+        
+        if not phone_number:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Phone number is required'
+            }, status=400)
+        
+        # Detect location from phone number if not provided
+        location_info = None
+        if not location:
+            location_info = LocationService.detect_location_from_phone_number(phone_number)
+        
+        # Create emergency report
+        with transaction.atomic():
+            emergency_report = EmergencyReport.objects.create(
+                channel='ivr',
+                phone_number=phone_number,
+                category=category,
+                severity=severity,
+                description=transcript or 'Emergency reported via voice call',
+                address=location or (LocationService.format_location_for_report(location_info) if location_info else ''),
+                district=location_info.get('district') if location_info else None,
+                state=location_info.get('state') if location_info else None,
+                raw_data={
+                    'call_id': call_id,
+                    'transcript': transcript,
+                    'category': category,
+                    'severity': severity,
+                    'location': location
+                }
+            )
+            
+            # Calculate priority score
+            emergency_report.priority_score = emergency_report.get_priority_score()
+            emergency_report.save()
+        
+        # Send confirmation call
+        ivr_service = IVRService()
+        ivr_service.send_ivr_confirmation(phone_number, emergency_report.report_id)
+        
+        return JsonResponse({
+            'status': 'success',
+            'report_id': emergency_report.report_id,
+            'message': f'Emergency report {emergency_report.report_id} received. Help is on the way.'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Failed to process IVR report: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def ussd_emergency_report(request):
+    """
+    Handle emergency reports via USSD
+    """
+    try:
+        from .ussd_service import USSDService
+        from .location_service import LocationService
+        
+        data = request.data
+        phone_number = data.get('phone_number', '').strip()
+        session_id = data.get('session_id', '')
+        menu_level = data.get('menu_level', 1)
+        selected_option = data.get('selected_option', '')
+        user_input = data.get('user_input', '')
+        session_data = data.get('session_data', {})
+        
+        if not phone_number:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Phone number is required'
+            }, status=400)
+        
+        # Process USSD request using USSD service
+        ussd_service = USSDService()
+        result = ussd_service.process_ussd_request(
+            phone_number, session_id, menu_level, user_input, session_data
+        )
+        
+        # If it's a successful report creation, add location detection
+        if result.get('status') == 'success' and 'report_id' in result:
+            try:
+                # Detect location from phone number
+                location_info = LocationService.detect_location_from_phone_number(phone_number)
+                
+                # Update the emergency report with location info
+                emergency_report = EmergencyReport.objects.get(report_id=result['report_id'])
+                if location_info:
+                    emergency_report.district = location_info.get('district')
+                    emergency_report.state = location_info.get('state')
+                    emergency_report.save()
+            except Exception as e:
+                logger.error(f"Failed to update location for USSD report: {str(e)}")
+        
+        return JsonResponse(result)
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Failed to process USSD report: {str(e)}'
+        }, status=500)
+
+
+@api_view(['GET'])
+def list_emergency_reports(request):
+    """
+    List all emergency reports with filtering options
+    """
+    try:
+        queryset = EmergencyReport.objects.all()
+        
+        # Apply filters
+        status_filter = request.GET.get('status')
+        category_filter = request.GET.get('category')
+        severity_filter = request.GET.get('severity')
+        channel_filter = request.GET.get('channel')
+        
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        if category_filter:
+            queryset = queryset.filter(category=category_filter)
+        if severity_filter:
+            queryset = queryset.filter(severity=int(severity_filter))
+        if channel_filter:
+            queryset = queryset.filter(channel=channel_filter)
+        
+        # Order by priority and creation time
+        queryset = queryset.order_by('-priority_score', '-created_at')
+        
+        serializer = EmergencyReportSerializer(queryset, many=True)
+        return Response({
+            'status': 'success',
+            'reports': serializer.data,
+            'count': queryset.count()
+        })
+        
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': f'Failed to fetch emergency reports: {str(e)}'
+        }, status=500)
+
+
+@api_view(['POST'])
+def acknowledge_emergency_report(request, report_id):
+    """
+    Acknowledge an emergency report
+    """
+    try:
+        if not request.user.is_authenticated:
+            return Response({
+                'status': 'error',
+                'message': 'Authentication required'
+            }, status=401)
+        
+        try:
+            emergency_report = EmergencyReport.objects.get(report_id=report_id)
+        except EmergencyReport.DoesNotExist:
+            return Response({
+                'status': 'error',
+                'message': 'Emergency report not found'
+            }, status=404)
+        
+        # Update report status
+        emergency_report.status = 'acknowledged'
+        emergency_report.acknowledged_at = timezone.now()
+        emergency_report.assigned_to = request.user
+        emergency_report.save()
+        
+        # Create response record
+        EmergencyResponse.objects.create(
+            emergency_report=emergency_report,
+            responder=request.user,
+            response_type='acknowledgment',
+            message=f'Emergency report {report_id} acknowledged by {request.user.username}'
+        )
+        
+        return Response({
+            'status': 'success',
+            'message': f'Emergency report {report_id} acknowledged'
+        })
+        
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': f'Failed to acknowledge emergency report: {str(e)}'
+        }, status=500)
+
+
+@api_view(['POST'])
+def update_emergency_report_status(request, report_id):
+    """
+    Update the status of an emergency report
+    """
+    try:
+        if not request.user.is_authenticated:
+            return Response({
+                'status': 'error',
+                'message': 'Authentication required'
+            }, status=401)
+        
+        try:
+            emergency_report = EmergencyReport.objects.get(report_id=report_id)
+        except EmergencyReport.DoesNotExist:
+            return Response({
+                'status': 'error',
+                'message': 'Emergency report not found'
+            }, status=404)
+        
+        new_status = request.data.get('status')
+        message = request.data.get('message', '')
+        
+        if new_status not in [choice[0] for choice in EmergencyReport.STATUS_CHOICES]:
+            return Response({
+                'status': 'error',
+                'message': 'Invalid status'
+            }, status=400)
+        
+        # Update report status
+        emergency_report.status = new_status
+        if new_status == 'resolved':
+            emergency_report.resolved_at = timezone.now()
+        emergency_report.save()
+        
+        # Create response record
+        EmergencyResponse.objects.create(
+            emergency_report=emergency_report,
+            responder=request.user,
+            response_type='update',
+            message=message or f'Status updated to {new_status} by {request.user.username}'
+        )
+        
+        return Response({
+            'status': 'success',
+            'message': f'Emergency report {report_id} status updated to {new_status}'
+        })
+        
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': f'Failed to update emergency report status: {str(e)}'
+        }, status=500)
+
+
+@api_view(['GET'])
+def get_emergency_report_details(request, report_id):
+    """
+    Get detailed information about a specific emergency report
+    """
+    try:
+        try:
+            emergency_report = EmergencyReport.objects.get(report_id=report_id)
+        except EmergencyReport.DoesNotExist:
+            return Response({
+                'status': 'error',
+                'message': 'Emergency report not found'
+            }, status=404)
+        
+        serializer = EmergencyReportSerializer(emergency_report)
+        responses = EmergencyResponse.objects.filter(emergency_report=emergency_report).order_by('-created_at')
+        response_serializer = EmergencyResponseSerializer(responses, many=True)
+        
+        return Response({
+            'status': 'success',
+            'report': serializer.data,
+            'responses': response_serializer.data
+        })
+        
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': f'Failed to fetch emergency report details: {str(e)}'
+        }, status=500)
+
+
+# -------------------------
+# Webhook Handlers for SMS, IVR, USSD
+# -------------------------
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def sms_webhook(request):
+    """
+    Handle incoming SMS webhooks from SMS gateway
+    """
+    try:
+        from .sms_service import SMSWebhookHandler
+        
+        # Extract SMS data from webhook
+        phone_number = request.data.get('From', '')
+        message = request.data.get('Body', '')
+        
+        if not phone_number or not message:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Missing phone number or message'
+            }, status=400)
+        
+        # Handle incoming SMS
+        result = SMSWebhookHandler.handle_incoming_sms(request.data)
+        
+        if result['status'] == 'success':
+            # Create emergency report
+            from .models import EmergencyReport
+            from .location_service import LocationService
+            
+            parsed_data = result['parsed_data']
+            location_info = LocationService.detect_location_from_phone_number(phone_number)
+            
+            emergency_report = EmergencyReport.objects.create(
+                channel='sms',
+                phone_number=phone_number,
+                category=parsed_data['category'],
+                severity=parsed_data['severity'],
+                description=parsed_data['description'],
+                district=location_info.get('district') if location_info else None,
+                state=location_info.get('state') if location_info else None,
+                raw_data={
+                    'webhook_data': request.data,
+                    'parsed_data': parsed_data
+                }
+            )
+            
+            # Calculate priority score
+            emergency_report.priority_score = emergency_report.get_priority_score()
+            emergency_report.save()
+            
+            # Send confirmation SMS
+            from .sms_service import SMSService
+            sms_service = SMSService()
+            sms_service.send_emergency_confirmation(phone_number, emergency_report.report_id)
+        
+        return JsonResponse(result)
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'SMS webhook handling failed: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def ivr_webhook(request):
+    """
+    Handle incoming IVR webhooks from Twilio
+    """
+    try:
+        from .ivr_service import IVRWebhookHandler, IVRService
+        
+        webhook_type = request.data.get('webhook_type', 'call_status')
+        
+        if webhook_type == 'call_status':
+            result = IVRWebhookHandler.handle_call_status(request.data)
+        elif webhook_type == 'recording_complete':
+            result = IVRWebhookHandler.handle_recording_complete(request.data)
+        else:
+            result = {
+                'status': 'error',
+                'message': 'Unknown webhook type'
+            }
+        
+        return JsonResponse(result)
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'IVR webhook handling failed: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def ussd_webhook(request):
+    """
+    Handle incoming USSD webhooks
+    """
+    try:
+        from .ussd_service import USSDWebhookHandler
+        
+        webhook_type = request.data.get('webhook_type', 'ussd_request')
+        
+        if webhook_type == 'ussd_request':
+            result = USSDWebhookHandler.handle_ussd_request(request.data)
+        elif webhook_type == 'session_end':
+            result = USSDWebhookHandler.handle_ussd_session_end(request.data)
+        else:
+            result = {
+                'status': 'error',
+                'message': 'Unknown webhook type'
+            }
+        
+        return JsonResponse(result)
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'USSD webhook handling failed: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def ivr_twiml(request, action=None):
+    """
+    Generate TwiML responses for Twilio IVR
+    """
+    try:
+        from .ivr_service import IVRService
+        
+        ivr_service = IVRService()
+        
+        if action == 'welcome':
+            twiml = ivr_service.generate_twiml_response('welcome')
+        elif action == 'category':
+            twiml = ivr_service.generate_twiml_response('category_selection')
+        elif action == 'severity':
+            twiml = ivr_service.generate_twiml_response('severity_selection')
+        elif action == 'description':
+            twiml = ivr_service.generate_twiml_response('description_prompt')
+        elif action == 'location':
+            twiml = ivr_service.generate_twiml_response('location_prompt')
+        elif action == 'confirmation':
+            report_id = request.GET.get('report_id', '')
+            twiml = ivr_service.generate_twiml_response('confirmation', report_id=report_id)
+        else:
+            twiml = ivr_service.generate_twiml_response('error', message='Invalid action')
+        
+        from django.http import HttpResponse
+        return HttpResponse(twiml, content_type='text/xml')
+        
+    except Exception as e:
+        from django.http import HttpResponse
+        error_twiml = f'''<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="alice" language="en-IN">An error occurred. Please try again later.</Say>
+</Response>'''
+        return HttpResponse(error_twiml, content_type='text/xml')
