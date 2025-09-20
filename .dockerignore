@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+
+# Environments
+.env
+venv/
+env/
+.venv/
+
+# Git
+.git
+.gitignore
+
+# IDE/editor
+.vscode/
+.idea/
+
+# Byte-compiled
+*.egg
+*.egg-info
+dist/
+build/
+.eggs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Optional: static/media (we collect them in Docker)
+staticfiles/
+media/
