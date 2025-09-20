@@ -139,11 +139,18 @@ INDIA_BOUNDS = {
 }
 
 # Emergency Reporting System Configuration for India
+# MSG91 Configuration (Primary SMS provider for India)
+MSG91_AUTH_KEY = os.environ.get('MSG91_AUTH_KEY', 'your_msg91_auth_key_here')
+MSG91_SENDER_ID = os.environ.get('MSG91_SENDER_ID', 'DISASTER')
+MSG91_ROUTE = os.environ.get('MSG91_ROUTE', '4')  # 4 = Transactional, 1 = Promotional
+MSG91_COUNTRY = os.environ.get('MSG91_COUNTRY', '91')  # India country code
+
+# Twilio Configuration (Fallback)
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', 'your_twilio_account_sid_here')
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', 'your_twilio_auth_token_here')
 TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER', '+91-XXXX-XXXXXX')  # Indian number
 
-# SMS Gateway Configuration (alternative to Twilio)
+# SMS Gateway Configuration (alternative to MSG91)
 SMS_GATEWAY_URL = os.environ.get('SMS_GATEWAY_URL', 'https://api.smsgateway.com/send')
 SMS_GATEWAY_API_KEY = os.environ.get('SMS_GATEWAY_API_KEY', 'your_sms_gateway_api_key_here')
 
