@@ -97,7 +97,8 @@
           {% endif %}
 
           <a href="{% url 'home' %}" class="px-4 py-2 nav-btn text-white rounded-2xl">Home</a>
-          <a href="#about" class="px-4 py-2 nav-btn text-white rounded-2xl">About</a>
+          <a href="{%url 'emergency_dashboard' %}" class="px-4 py-2 nav-btn text-white rounded-2xl">Emergency Dashboard</a>
+          <a href="{%url 'incoming_sms_dashboard' %}" class="px-4 py-2 nav-btn text-white rounded-2xl">Check Incoming SMS</a>
           <a href="{% url 'earthquake_risk_map'%}" class="px-4 py-2 nav-btn text-white rounded-2xl">Risk Map</a>
         </div>
 

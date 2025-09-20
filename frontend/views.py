@@ -42,6 +42,12 @@ def login_view(request):
 def home(request):
     return render(request, "frontend/home.html")
 
+def emergency_dashboard(request):
+    return render(request, "frontend/emergency_dashboard.html")
+
+def incoming_sms_dashboard(request):
+    return render(request, "frontend/incoming_sms_dashboard.html")
+
 
 def globe(request):
     return render(request, "frontend/globe.html")

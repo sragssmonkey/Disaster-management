@@ -9,12 +9,15 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(template_name='frontend/login.html'), name='login'),
     path('logout/', frontend_views.logout_view, name='logout'),
 
+
     # Frontend pages
     path("", frontend_views.home, name="home"),
     path("report/", frontend_views.report, name="report"),
     path("view_report/", frontend_views.view_report, name="view_report"),
     path("globe/", frontend_views.globe, name="globe"),
-
+    path("emergency_dashboard/", frontend_views.emergency_dashboard, name="emergency_dashboard"),
+    path("incoming_sms_dashboard/", frontend_views.incoming_sms_dashboard, name="incoming_sms_dashboard"),
+    
     # APIs
     path("api/reports/", backend_views.CrowdReportList.as_view(), name="api-reports"),
     path("api/reports/simple/", frontend_views.reports_api, name="reports_api"),  # avoid conflict
