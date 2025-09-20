@@ -4,6 +4,9 @@ from django.conf import settings
 from django.shortcuts import render
 import json
 
+def earthquake_risk_map(request):
+    return render(request,"mlmodel/earthquake_risk_map.html")
+
 def disaster_map(request):
     # File paths
     earthquake_file = os.path.join(settings.BASE_DIR, "data", "earthquake_india_2000_2025.csv")

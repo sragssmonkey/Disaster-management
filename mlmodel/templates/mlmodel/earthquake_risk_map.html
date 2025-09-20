@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Earthquake Risk Nowcast</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <style>
+    html, body, #map { height: 100%; margin: 0; }
+    .app-header { position: fixed; top: 12px; left: 12px; right: 12px; z-index: 9999; display:flex; gap:12px; align-items:center; }
+    .panel { background:#ffffffd9; backdrop-filter: blur(6px); border:1px solid #e0e0e0; border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,0.12); padding:10px 12px; display:flex; align-items:center; gap:10px; }
+    .brand { font-weight:800; font-size:16px; }
+    
+    .panel input[type="text"], .panel input[type="number"] { padding:6px 8px; border:1px solid #ddd; border-radius:8px; outline:none; width: 170px; }
+    .btn { background:#111827; color:white; border:none; border-radius:8px; padding:8px 10px; cursor:pointer; font-weight:700; }
+    .btn.secondary { background:#2563eb; }
+    .pulse {
+      background: rgba(255,0,0,0.3);
+      border-radius: 50%;
+      height: 18px; width: 18px;
+      position: relative;
+      box-shadow: 0 0 0 rgba(255,0,0,0.7);
+      animation: pulse 1.5s infinite;
+      border: 2px solid #c00;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255,0,0,0.7); }
+      70% { box-shadow: 0 0 0 12px rgba(255,0,0,0); }
+      100% { box-shadow: 0 0 0 0 rgba(255,0,0,0); }
+    }
+    .info-card {
+      position: fixed; right: 20px; bottom: 20px; z-index: 9999;
+      background: white; padding: 12px 14px; border: 1px solid #ddd; border-radius: 8px;
+      min-width: 260px; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; font-size: 13px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    .info-title { font-weight: 700; margin-bottom: 6px; }
+    .badge { display:inline-block; padding: 2px 8px; border-radius: 999px; font-weight: 600; font-size: 12px; }
+    .badge-safe { background:#e8f5e9; color:#1b5e20; }
+    .badge-risk { background:#ffebee; color:#b71c1c; }
+    .grad-legend { position: fixed; left: 20px; bottom: 20px; z-index: 9999; background: white; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 12px; }
+    .bar { width: 180px; height: 10px; background: linear-gradient(90deg, #2ecc71 0%, #f1c40f 50%, #e74c3c 100%); border-radius: 4px; margin: 6px 0; }
+    .slider-wrap { margin-top: 8px; }
+    .slider-wrap input { width: 180px; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="app-header">
+    <div class="panel">
+      <div class="brand">EQ Nowcast</div>
+      <div id="latlonWrap">
+        <input id="latInput" type="number" placeholder="Lat" step="0.0001" />
+        <input id="lonInput" type="number" placeholder="Lon" step="0.0001" />
+        <button id="goBtn" class="btn secondary">Go</button>
+      </div>
+      <button id="locateBtn" class="btn">Use my location</button>
+      <button id="clearBtn" class="btn" style="background:#6b7280;">Clear</button>
+    </div>
+  </div>
+  <div class="grad-legend">
+    <div style="font-weight:600;">Earthquake Likelihood</div>
+    <div class="bar"></div>
+    <div style="display:flex; justify-content: space-between;">
+      <span>0%</span><span>50%</span><span>100%</span>
+    </div>
+    <div class="slider-wrap">
+      <div style="margin-bottom:4px;">Safety threshold: <span id="thrLabel">50%</span></div>
+      <input id="thr" type="range" min="0" max="100" step="5" value="50" />
+    </div>
+  </div>
+  <div class="info-card" id="info" style="display:none;"></div>
+
+  <script>
+    const points = [{"cell_id": "12.0_95.0", "lat": 12.0787, "lon": 95.3428, "prob": 0.0, "yes": "No", "pred": "Low", "max_mag": 4.9, "count_m4": 1, "count_m5": 0}, {"cell_id": "15.0_96.0", "lat": 15.426, "lon": 96.3212, "prob": 0.0, "yes": "No", "pred": "Low", "max_mag": 4.7, "count_m4": 1, "count_m5": 0}, {"cell_id": "16.0_96.0", "lat": 16.0999, "lon": 96.4474, "prob": 0.0, "yes": "No", "pred": "Low", "max_mag": 4.5, "count_m4": 1, "count_m5": 0}, {"cell_id": "16.0_96.5", "lat": 16.1249, "lon": 96.5679, "prob": 0.0, "yes": "No", "pred": "Low", "max_mag": 4.6, "count_m4": 1, "count_m5": 0}, {"cell_id": "19.0_96.0", "lat": 19.0025, "lon": 96.3558, "prob": 0.0, "yes": "No", "pred": "Low", "max_mag": 4.9, "count_m4": 1, "count_m5": 0}, {"cell_id": "20.5_93.5", "lat": 20.8843, "lon": 93.7363, "prob": 0.006666666666666667, "yes": "No", "pred": "Low", "max_mag": 4.6, "count_m4": 1, "count_m5": 0}, {"cell_id": "23.0_94.0", "lat": 23.3676, "lon": 94.2427, "prob": 0.9966666666666667, "yes": "Yes", "pred": "Moderate", "max_mag": 5.3, "count_m4": 2, "count_m5": 1}, {"cell_id": "23.5_94.5", "lat": 23.6548, "lon": 94.7283, "prob": 0.013333333333333334, "yes": "No", "pred": "Low", "max_mag": 4.4, "count_m4": 1, "count_m5": 0}, {"cell_id": "26.5_91.5", "lat": 26.699, "lon": 91.6927, "prob": 0.0, "yes": "No", "pred": "Low", "max_mag": 4.4, "count_m4": 1, "count_m5": 0}, {"cell_id": "26.5_92.0", "lat": 26.6066, "lon": 92.1963, "prob": 1.0, "yes": "Yes", "pred": "Moderate", "max_mag": 5.5, "count_m4": 1, "count_m5": 1}, {"cell_id": "27.0_86.5", "lat": 27.0552, "lon": 86.7342, "prob": 0.0, "yes": "No", "pred": "Low", "max_mag": 4.1, "count_m4": 1, "count_m5": 0}, {"cell_id": "29.0_86.5", "lat": 29.0474, "lon": 86.9103, "prob": 1.0, "yes": "Yes", "pred": "Moderate", "max_mag": 5.0, "count_m4": 1, "count_m5": 1}, {"cell_id": "30.0_84.0", "lat": 30.2245, "lon": 84.3846, "prob": 0.0, "yes": "No", "pred": "Low", "max_mag": 4.6, "count_m4": 1, "count_m5": 0}, {"cell_id": "32.5_88.0", "lat": 32.9712, "lon": 88.2591, "prob": 0.0, "yes": "No", "pred": "Low", "max_mag": 4.3, "count_m4": 1, "count_m5": 0}, {"cell_id": "33.0_75.5", "lat": 33.3289, "lon": 75.9696, "prob": 0.0, "yes": "No", "pred": "Low", "max_mag": 4.2, "count_m4": 1, "count_m5": 0}, {"cell_id": "33.0_88.0", "lat": 33.0875, "lon": 88.4184, "prob": 1.0, "yes": "Yes", "pred": "Moderate", "max_mag": 5.0, "count_m4": 1, "count_m5": 1}, {"cell_id": "33.5_87.5", "lat": 33.9045, "lon": 87.686, "prob": 1.0, "yes": "Yes", "pred": "Moderate", "max_mag": 5.1, "count_m4": 1, "count_m5": 1}, {"cell_id": "34.0_70.5", "lat": 34.4589, "lon": 70.7081, "prob": 0.02, "yes": "No", "pred": "Low", "max_mag": 4.7, "count_m4": 5, "count_m5": 0}, {"cell_id": "34.5_70.5", "lat": 34.5807, "lon": 70.6616, "prob": 1.0, "yes": "Yes", "pred": "High", "max_mag": 6.0, "count_m4": 15, "count_m5": 7}, {"cell_id": "36.0_70.0", "lat": 36.4731, "lon": 70.4853, "prob": 0.006666666666666667, "yes": "No", "pred": "Low", "max_mag": 4.3, "count_m4": 1, "count_m5": 0}, {"cell_id": "36.0_71.0", "lat": 36.4432, "lon": 71.2715, "prob": 0.9933333333333334, "yes": "Yes", "pred": "Moderate", "max_mag": 5.1, "count_m4": 3, "count_m5": 1}, {"cell_id": "36.5_71.0", "lat": 36.546, "lon": 71.126, "prob": 0.016666666666666666, "yes": "No", "pred": "Low", "max_mag": 4.2, "count_m4": 1, "count_m5": 0}, {"cell_id": "36.5_75.0", "lat": 36.7806, "lon": 75.429, "prob": 0.0, "yes": "No", "pred": "Low", "max_mag": 4.5, "count_m4": 1, "count_m5": 0}, {"cell_id": "37.0_75.0", "lat": 37.0714, "lon": 75.3716, "prob": 0.0, "yes": "No", "pred": "Low", "max_mag": 4.7, "count_m4": 1, "count_m5": 0}];
+
+    const map = L.map('map').setView([22.9734, 78.6569], 5);
+    window.map = map;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Optional border overlay
+    fetch('https://raw.githubusercontent.com/geohacker/india/master/state/india_telengana.geojson')
+      .then(r => r.json())
+      .then(geo => L.geoJSON(geo, { style: { color: 'black', weight: 1, fillOpacity: 0 } }).addTo(map));
+
+    function colorForProb(p) {
+      const r = p < 0.5 ? Math.floor(2*p*255) : 255;
+      const g = p < 0.5 ? 255 : Math.floor((1 - (p-0.5)*2) * 255);
+      const b = 60;
+      return `rgb(${r},${g},${b})`;
+    }
+
+    const layer = L.layerGroup().addTo(map);
+    const markers = [];
+    points.forEach(pt => {
+      const marker = L.circleMarker([pt.lat, pt.lon], {
+        radius: 7,
+        color: colorForProb(pt.prob),
+        weight: 2,
+        fillColor: colorForProb(pt.prob),
+        fillOpacity: 0.75,
+        interactive: false
+      }).addTo(layer);
+      marker.__data = pt;
+      markers.push(marker);
+    });
+
+    let userMarker = null;
+    function showUserLocation(latlng) {
+      if (userMarker) { map.removeLayer(userMarker); }
+      const divIcon = L.divIcon({ className: 'pulse' });
+      userMarker = L.marker(latlng, { icon: divIcon }).addTo(map);
+      evaluateSafety(latlng);
+    }
+
+    function haversine(a, b) {
+      const R = 6371e3;
+      const toRad = d => d * Math.PI / 180;
+      const dLat = toRad(b.lat - a.lat);
+      const dLon = toRad(b.lng - a.lng);
+      const lat1 = toRad(a.lat);
+      const lat2 = toRad(b.lat);
+      const h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+      return 2*R*Math.asin(Math.sqrt(h));
+    }
+
+    function nearestPoint(latlng) {
+      let best = null, bestD = Infinity;
+      markers.forEach(m => {
+        const ll = m.getLatLng();
+        const d = haversine(latlng, { lat: ll.lat, lng: ll.lng });
+        if (d < bestD) { bestD = d; best = m; }
+      });
+      return { marker: best, dist: bestD };
+    }
+
+    function evaluateSafety(latlng) {
+      const thrEl = document.getElementById('thr');
+      const threshold = parseInt(thrEl.value, 10) / 100.0;
+      const res = nearestPoint(latlng);
+      if (!res.marker) return;
+      const dKm = (res.dist/1000).toFixed(1);
+      const pt = res.marker.__data;
+      const safe = pt.prob < threshold;
+      const card = document.getElementById('info');
+      card.style.display = 'block';
+      card.innerHTML = `
+        <div class="info-title">Location Safety</div>
+        <div style="margin-bottom:6px;">Nearest cell: <b>${pt.cell_id}</b> • ${dKm} km away</div>
+        <div style="margin-bottom:8px;">Probability: <b>${(pt.prob*100).toFixed(0)}%</b> &nbsp; Threshold: <b>${(threshold*100).toFixed(0)}%</b></div>
+        <div class="badge ${safe ? 'badge-safe' : 'badge-risk'}">${safe ? 'Safe' : 'Not Safe'}</div>
+      `;
+    }
+
+    // Threshold slider
+    document.getElementById('thr').addEventListener('input', (e) => {
+      document.getElementById('thrLabel').innerText = `${e.target.value}%`;
+      if (userMarker) { evaluateSafety(userMarker.getLatLng()); }
+    });
+
+    // Clear user marker
+    document.getElementById('clearBtn').onclick = () => {
+      if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
+      const card = document.getElementById('info');
+      card.style.display = 'none';
+      card.innerHTML = '';
+    };
+
+    // Lat/Lon Go
+    document.getElementById('goBtn').onclick = () => {
+      const lat = parseFloat(document.getElementById('latInput').value);
+      const lon = parseFloat(document.getElementById('lonInput').value);
+      if (isNaN(lat) || isNaN(lon)) return;
+      const ll = { lat, lng: lon };
+      map.setView(ll, 8);
+      showUserLocation(ll);
+    };
+
+    // Use my location
+    document.getElementById('locateBtn').onclick = () => {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const ll = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        map.setView(ll, 10);
+        showUserLocation(ll);
+      });
+    };
+  </script>
+</body>
+</html>
+
+
