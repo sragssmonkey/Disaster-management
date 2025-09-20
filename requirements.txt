@@ -36,4 +36,7 @@ joblib==1.5.2
 gunicorn==21.2.0
 whitenoise==6.5.0
 python-dotenv
+dj-database-url
+python-dotenv
+psycopg2-binary
 
