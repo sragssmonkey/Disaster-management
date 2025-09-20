@@ -313,9 +313,8 @@ def get_ussd_menu(language='en', menu_level=1):
 
 def detect_language_from_phone_number(phone_number):
     """
-    Detect language based on phone number prefix (simplified approach)
-    This is a basic implementation - in production, you might want to use
-    more sophisticated language detection or user preferences
+    Detect language based on phone number prefix for India
+    Enhanced for Indian phone number patterns
     
     Args:
         phone_number (str): Phone number
@@ -323,13 +322,44 @@ def detect_language_from_phone_number(phone_number):
     Returns:
         str: Detected language code
     """
-    # This is a simplified approach - in reality, you'd need more sophisticated detection
-    # or maintain user language preferences in the database
-    
-    # Basic mapping based on common prefixes (this is just an example)
     if phone_number.startswith('+91'):
-        # India - could be any Indian language
-        return 'en'  # Default to English for now
+        # India - detect based on area code
+        # Extract area code (first 2-4 digits after +91)
+        area_code = phone_number[3:7] if len(phone_number) > 6 else phone_number[3:5]
+        
+        # Regional language mapping for Indian states
+        regional_mapping = {
+            # Hindi belt
+            '11': 'hi',  # Delhi
+            '12': 'hi',  # Haryana
+            '13': 'hi',  # Punjab
+            '14': 'hi',  # Rajasthan
+            '15': 'hi',  # Uttar Pradesh
+            '16': 'hi',  # Madhya Pradesh
+            
+            # South India
+            '40': 'te',  # Telangana
+            '44': 'ta',  # Tamil Nadu
+            '80': 'kn',  # Karnataka
+            '33': 'bn',  # West Bengal
+            
+            # West India
+            '22': 'mr',  # Maharashtra
+            '79': 'gu',  # Gujarat
+            
+            # East India
+            '67': 'or',  # Odisha
+            '36': 'as',  # Assam
+            
+            # North East
+            '38': 'as',  # Assam
+            '37': 'as',  # Manipur
+            
+            # Kerala
+            '48': 'ml',  # Kerala
+        }
+        
+        return regional_mapping.get(area_code, 'hi')  # Default to Hindi for India
     elif phone_number.startswith('+880'):
         # Bangladesh
         return 'bn'

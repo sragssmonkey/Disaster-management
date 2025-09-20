@@ -242,7 +242,7 @@ class SMSService:
     
     def send_emergency_instructions(self, phone_number: str, category: str, language: str = 'en') -> Dict:
         """
-        Send emergency instructions based on category
+        Send India-specific emergency instructions based on category
         
         Args:
             phone_number (str): Recipient phone number
@@ -252,30 +252,21 @@ class SMSService:
         Returns:
             Dict: Response status
         """
-        instructions = {
-            'medical': {
-                'en': "MEDICAL EMERGENCY: Stay calm. Call 102 for ambulance. Provide clear location. Do not move patient if injured.",
-                'hi': "चिकित्सा आपातकाल: शांत रहें। एम्बुलेंस के लिए 102 पर कॉल करें। स्पष्ट स्थान बताएं।",
-                'bn': "চিকিৎসা জরুরি: শান্ত থাকুন। অ্যাম্বুলেন্সের জন্য ১০২ ডাকুন। স্পষ্ট অবস্থান দিন।"
-            },
-            'fire': {
-                'en': "FIRE EMERGENCY: Evacuate immediately. Call 101 for fire department. Do not use elevators. Stay low if smoke present.",
-                'hi': "आग का आपातकाल: तुरंत निकलें। फायर डिपार्टमेंट के लिए 101 पर कॉल करें।",
-                'bn': "আগুনের জরুরি: সঙ্গে সঙ্গে বেরিয়ে আসুন। ফায়ার ডিপার্টমেন্টের জন্য ১০১ ডাকুন।"
-            },
-            'flood': {
-                'en': "FLOOD EMERGENCY: Move to higher ground. Avoid walking through floodwater. Call 100 for rescue. Stay informed.",
-                'hi': "बाढ़ का आपातकाल: ऊंची जगह पर जाएं। बाढ़ के पानी से बचें। बचाव के लिए 100 पर कॉल करें।",
-                'bn': "বন্যার জরুরি: উঁচু জায়গায় যান। বন্যার পানিতে হাঁটবেন না। উদ্ধারের জন্য ১০০ ডাকুন।"
-            },
-            'earthquake': {
-                'en': "EARTHQUAKE: Drop, Cover, Hold. Stay indoors if safe. Avoid windows. Call 100 if trapped.",
-                'hi': "भूकंप: बैठ जाएं, ढकें, पकड़ें। सुरक्षित हो तो घर के अंदर रहें। खिड़कियों से बचें।",
-                'bn': "ভূমিকম্প: বসুন, ঢাকুন, ধরে রাখুন। নিরাপদ হলে ঘরের ভিতরে থাকুন। জানালা এড়িয়ে চলুন।"
-            }
-        }
+        from .india_emergency_instructions import get_india_emergency_instructions, get_india_emergency_contacts
         
-        message = instructions.get(category, {}).get(language, instructions.get(category, {}).get('en', 'Follow emergency procedures.'))
+        # Get India-specific instructions
+        instructions = get_india_emergency_instructions(language, category)
+        contacts = get_india_emergency_contacts()
+        
+        # Format message with India emergency contacts
+        message = f"🚨 EMERGENCY INSTRUCTIONS 🚨\n\n"
+        message += f"{instructions}\n\n"
+        message += f"Emergency Contacts:\n"
+        message += f"Police: {contacts['police']}\n"
+        message += f"Fire: {contacts['fire']}\n"
+        message += f"Ambulance: {contacts['ambulance']}\n"
+        message += f"Disaster Management: {contacts['disaster_management']}\n\n"
+        message += f"Stay safe! Help is on the way."
         
         return self.send_sms(phone_number, message, language)
     

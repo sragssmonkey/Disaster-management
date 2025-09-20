@@ -138,14 +138,18 @@ INDIA_BOUNDS = {
     "MIN_LNG": 68.0, "MAX_LNG": 97.5,
 }
 
-# Emergency Reporting System Configuration
-TWILIO_ACCOUNT_SID = 'your_twilio_account_sid_here'
-TWILIO_AUTH_TOKEN = 'your_twilio_auth_token_here'
-TWILIO_PHONE_NUMBER = '+1234567890'
+# Emergency Reporting System Configuration for India
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', 'your_twilio_account_sid_here')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', 'your_twilio_auth_token_here')
+TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER', '+91-XXXX-XXXXXX')  # Indian number
 
 # SMS Gateway Configuration (alternative to Twilio)
-SMS_GATEWAY_URL = 'https://api.smsgateway.com/send'
-SMS_GATEWAY_API_KEY = 'your_sms_gateway_api_key_here'
+SMS_GATEWAY_URL = os.environ.get('SMS_GATEWAY_URL', 'https://api.smsgateway.com/send')
+SMS_GATEWAY_API_KEY = os.environ.get('SMS_GATEWAY_API_KEY', 'your_sms_gateway_api_key_here')
 
-# Base URL for webhooks
-BASE_URL = 'http://localhost:8000'
+# Base URL for webhooks (Render deployment)
+BASE_URL = os.environ.get('BASE_URL', 'https://disaster-management-z940.onrender.com')
+
+# India-specific settings
+INDIA_EMERGENCY_NUMBER = '+91-XXXX-XXXXXX'  # Your Twilio Indian number
+INDIA_SMS_SHORT_CODE = 'XXXX'  # Optional: Get SMS short code for India
