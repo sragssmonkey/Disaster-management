@@ -23,22 +23,28 @@ User = get_user_model()
 def view_report(request):
     reports = CrowdReport.objects.all().order_by("-created_at")
 
-    rescuer_count = User.objects.filter(role="rescuer").count()
+    rescuer_count = 0
     rescuer_location = None
+    is_rescuer = False
 
-    if request.user.is_authenticated and request.user.is_rescuer():
-        try:
-            rescuer_location = RescuerLocation.objects.get(user=request.user)
-        except RescuerLocation.DoesNotExist:
-            rescuer_location = None
+    if request.user.is_authenticated:
+        # check if user has the method
+        is_rescuer = hasattr(request.user, "is_rescuer") and request.user.is_rescuer()
+        rescuer_count = User.objects.filter(role="rescuer").count()
+
+        if is_rescuer:
+            try:
+                rescuer_location = RescuerLocation.objects.get(user=request.user)
+            except RescuerLocation.DoesNotExist:
+                rescuer_location = None
 
     context = {
         "reports": reports,
-        "is_rescuer": request.user.is_authenticated and request.user.is_rescuer(),
+        "is_rescuer": is_rescuer,
         "active_rescuers": rescuer_count,
         "rescuer_location": rescuer_location,
     }
-    return render(request, "view_report.html", context)
+    return render(request, "frontend/view_report.html", context)
 
 
 @csrf_exempt
